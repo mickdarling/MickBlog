@@ -12,6 +12,8 @@ A Django-based personal website with blog, projects portfolio, resume, and conta
 
 ## Installation
 
+### Standard Installation
+
 1. Clone the repository
 ```bash
 git clone <repository-url>
@@ -45,6 +47,31 @@ python manage.py runserver
 python manage.py update_site_config
 ```
 
+### Docker Installation (Recommended for Production)
+
+1. Clone the repository
+```bash
+git clone <repository-url>
+cd MickBlog
+```
+
+2. Create and configure the environment file
+```bash
+cp .env.docker .env.docker.local
+# Edit .env.docker.local with your secure passwords and settings
+```
+
+3. Build and start the Docker containers
+```bash
+docker-compose up -d --build
+```
+
+4. The application will be available at:
+   - http://localhost (redirects to HTTPS)
+   - https://localhost (secure access)
+
+5. Access the admin interface at https://localhost/admin with the credentials specified in your .env.docker.local file.
+
 ## Customization
 
 ### Site Configuration
@@ -61,6 +88,8 @@ After editing, run:
 ```bash
 python manage.py update_site_config
 ```
+
+With Docker, the site_config.md file is mounted as a volume, so changes are automatically applied without rebuilding the container.
 
 ### Custom Styling
 
@@ -87,9 +116,23 @@ The site includes several security features:
 - HSTS headers (in production)
 - IP logging for contact form submissions
 
-## Deployment
+## Docker Deployment Details
 
-For production deployment:
+The Docker setup includes:
+
+- **Web Application Container**: Django + Gunicorn
+- **Database Container**: PostgreSQL
+- **Web Server Container**: Nginx with SSL
+
+Persistent volumes are used for:
+- Database data
+- Media uploads
+- Static files
+- Site configuration
+
+## Manual Deployment
+
+For manual production deployment:
 
 1. Set `DEBUG=False` in the `.env` file
 2. Configure a proper database (PostgreSQL recommended)
@@ -106,3 +149,7 @@ Created with:
 - Bootstrap 5
 - Markdownx
 - Font Awesome
+- Docker
+- Nginx
+- PostgreSQL
+- Gunicorn
