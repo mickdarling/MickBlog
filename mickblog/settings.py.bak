@@ -129,7 +129,7 @@ WSGI_APPLICATION = 'mickblog.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': env('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': env('DB_NAME', default=BASE_DIR / 'db.sqlite3'),
+        'NAME': env('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),  # Convert PosixPath to string
         'USER': env('DB_USER', default=''),
         'PASSWORD': env('DB_PASSWORD', default=''),
         'HOST': env('DB_HOST', default=''),
