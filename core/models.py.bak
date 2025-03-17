@@ -51,6 +51,9 @@ class SiteConfig(models.Model):
     maintenance_mode = models.BooleanField(default=False, help_text="Enable maintenance mode for the site")
     meta_description = models.TextField(blank=True, help_text="SEO description for the site") 
     
+    # AI configuration
+    anthropic_api_key = models.CharField(max_length=100, blank=True, help_text="Anthropic API key for AI-powered site configuration editor")
+    
     # Public class variable to control signal triggering
     # This avoids attribute errors when checking for _skip_signal
     skip_signal = False
@@ -99,6 +102,101 @@ class SiteConfig(models.Model):
         This allows writing content in Markdown but displaying as HTML.
         """
         return markdownify(self.about_text)
+    
+    def export_to_markdown(self):
+        """
+        Export the current configuration to markdown format.
+        
+        This formats all configuration fields into a structured markdown document
+        with appropriate YAML and code blocks, matching the format expected by
+        the update_site_config management command.
+        
+        Returns:
+            str: The markdown representation of the site configuration
+        """
+        # Build the markdown content section by section
+        markdown = "# Site Configuration Template\n\n"
+        markdown += "This markdown file allows you to easily customize the content, style, and configuration of your MickBlog site. Edit the sections below and migrate the database to apply changes.\n\n"
+        
+        # Site Information section
+        markdown += "## Site Information\n\n"
+        markdown += "```yaml\n"
+        markdown += f"brand: {self.brand}\n"
+        markdown += f"footer_text: \"{self.footer_text}\"\n"
+        markdown += f"meta_description: {self.meta_description}\n"
+        markdown += f"tagline: {self.tagline}\n"
+        markdown += f"title: {self.title}\n\n"
+        markdown += "```\n\n"
+        
+        # Colors and Styling
+        markdown += "## Colors and Styling\n\n"
+        markdown += "```yaml\n"
+        markdown += f"primary_color: '{self.primary_color}'\n"
+        markdown += f"secondary_color: '{self.secondary_color}'\n\n"
+        markdown += "```\n\n"
+        
+        # Custom CSS - placeholder section
+        markdown += "## Custom CSS\n\n"
+        markdown += "Add any custom CSS below. This will be applied to the entire site.\n\n"
+        
+        # Read the custom CSS file if it exists
+        custom_css = ""
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'custom.css')
+        if os.path.exists(css_path):
+            with open(css_path, 'r') as f:
+                custom_css = f.read()
+        
+        markdown += "```css\n"
+        markdown += custom_css if custom_css else "/* Custom CSS styles */\n"
+        markdown += "```\n\n"
+        
+        # About Me section
+        markdown += "## About Me\n\n"
+        markdown += "Write your about information in markdown format below.\n\n"
+        markdown += "```markdown\n"
+        markdown += self.about_text if self.about_text else "I am a software developer with experience in web development."
+        markdown += "\n```\n\n"
+        
+        # Contact Information
+        markdown += "## Contact Information\n\n"
+        markdown += "```yaml\n"
+        markdown += f"address: '{self.address}'\n"
+        markdown += f"email: {self.email}\n"
+        markdown += f"phone: '{self.phone}'\n\n"
+        markdown += "```\n\n"
+        
+        # Social Media
+        markdown += "## Social Media\n\n"
+        markdown += "```yaml\n"
+        markdown += f"bluesky_url: {self.bluesky_url}\n"
+        markdown += f"facebook_url: {self.facebook_url}\n"
+        markdown += f"github_url: {self.github_url}\n"
+        markdown += f"instagram_url: {self.instagram_url}\n"
+        markdown += f"linkedin_url: {self.linkedin_url}\n\n"
+        markdown += "```\n\n"
+        
+        # Google Analytics
+        markdown += "## Google Analytics\n\n"
+        markdown += "```yaml\n"
+        markdown += f"google_analytics_id: {self.google_analytics_id}\n\n"
+        markdown += "```\n\n"
+        
+        # AI Configuration
+        markdown += "## AI Configuration\n\n"
+        markdown += "```yaml\n"
+        markdown += f"anthropic_api_key: {self.anthropic_api_key}\n\n"
+        markdown += "```\n\n"
+        
+        # How to apply changes section
+        markdown += "---\n\n"
+        markdown += "## How to Apply Changes\n\n"
+        markdown += "After updating this file, run the following management command to apply the changes to your site:\n\n"
+        markdown += "```bash\n"
+        markdown += "python manage.py update_site_config\n"
+        markdown += "```\n\n"
+        markdown += "This will parse the markdown file and update the database with the new configuration."
+        
+        return markdown
 
 
 # Thread-safe synchronization mechanism

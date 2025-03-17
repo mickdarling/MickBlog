@@ -90,6 +90,11 @@ class Command(BaseCommand):
         
         if analytics:
             config.google_analytics_id = analytics.get('google_analytics_id', config.google_analytics_id)
+            
+        # Parse AI configuration
+        ai_config = self._parse_yaml_block(content, 'AI Configuration')
+        if ai_config:
+            config.anthropic_api_key = ai_config.get('anthropic_api_key', config.anthropic_api_key)
         
         # Save config to database
         config.save()

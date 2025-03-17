@@ -1,14 +1,19 @@
+"""
+Custom admin site configuration for MickBlog.
+
+This module contains a direct registration of the SiteConfig model to ensure it
+appears in the admin interface even if there's an issue with the decorator-based registration.
+"""
+
 from django.contrib import admin
-from django.contrib import messages
-from django.core.management import call_command
 from django.urls import path
-from django.shortcuts import render
 from .models import SiteConfig
 from .admin.views import ai_editor_view, ai_message_view, apply_changes_view
 import traceback
 import time
+from django.contrib import messages
+from django.core.management import call_command
 
-@admin.register(SiteConfig)
 class SiteConfigAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Basic Info', {
@@ -92,3 +97,6 @@ class SiteConfigAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context['show_ai_editor_button'] = True
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+# Direct registration to ensure model is in admin
+admin.site.register(SiteConfig, SiteConfigAdmin)

@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.core.management import call_command
+from django.urls import path
+from django.shortcuts import render
 from .models import SiteConfig
+from .admin.views import ai_editor_view, ai_message_view, apply_changes_view
 import traceback
 import time
 
@@ -27,7 +30,21 @@ class SiteConfigAdmin(admin.ModelAdmin):
             'fields': ('google_analytics_id', 'maintenance_mode'),
             'classes': ('collapse',)
         }),
+        ('AI Configuration', {
+            'fields': ('anthropic_api_key',),
+            'classes': ('collapse',)
+        }),
     )
+    
+    def get_urls(self):
+        """Add custom URLs for the AI editor interface"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('ai_editor/', self.admin_site.admin_view(ai_editor_view), name='ai-config-editor'),
+            path('ai_message/', self.admin_site.admin_view(ai_message_view), name='ai-config-message'),
+            path('apply_changes/', self.admin_site.admin_view(apply_changes_view), name='ai-config-apply'),
+        ]
+        return custom_urls + urls
     
     def has_add_permission(self, request):
         # Limit to only one instance
@@ -69,3 +86,9 @@ class SiteConfigAdmin(admin.ModelAdmin):
             response['Location'] += f"?_={int(time.time())}"
         
         return response
+        
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """Override change view to add button for AI editor"""
+        extra_context = extra_context or {}
+        extra_context['show_ai_editor_button'] = True
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)

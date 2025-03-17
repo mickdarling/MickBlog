@@ -24,6 +24,7 @@ env = environ.Env(
     SITE_BRAND=(str, 'MB'),
     PRIMARY_COLOR=(str, '#007bff'),
     SECONDARY_COLOR=(str, '#6c757d'),
+    ANTHROPIC_API_KEY=(str, ''),
 )
 
 # Take environment variables from .env file if it exists
@@ -206,3 +207,6 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Email settings - using console backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Anthropic API settings for AI-powered site configuration
+ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY')
