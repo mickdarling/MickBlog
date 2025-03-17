@@ -1,0 +1,59 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ SITE_TITLE }} - Projects{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Projects</h1>
+
+<div class="row">
+    {% for project in projects %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card project-card h-100">
+                {% if project.image %}
+                    <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                {% else %}
+                    <div class="card-img-top bg-light text-center py-5">
+                        <i class="fas fa-code fa-3x text-muted"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.title }}</h5>
+                    
+                    <div class="mb-2">
+                        {% if project.status == 'in_progress' %}
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                        {% elif project.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                        {% elif project.status == 'archived' %}
+                            <span class="badge bg-secondary">Archived</span>
+                        {% endif %}
+                        
+                        {% if project.featured %}
+                            <span class="badge bg-primary">Featured</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-text mb-3">{{ project.formatted_description|safe|truncatechars_html:150 }}</div>
+                    
+                    {% if project.technologies.all %}
+                        <div class="mb-3">
+                            {% for tech in project.technologies.all %}
+                                <span class="badge bg-light text-dark me-1 mb-1">{{ tech.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <a href="{{ project.get_absolute_url }}" class="btn btn-sm" style="background-color: var(--primary-color); color: white;">Details</a>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col">
+            <div class="alert alert-info">
+                No projects available yet.
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

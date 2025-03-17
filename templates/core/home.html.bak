@@ -1,0 +1,68 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ SITE_TITLE }} - Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron p-5 bg-light rounded">
+    <h1 class="display-4">{{ SITE_TITLE }}</h1>
+    <p class="lead">{% if site.tagline %}{{ site.tagline }}{% else %}Welcome to my personal site!{% endif %}</p>
+    <hr class="my-4">
+    {% if site.about_text %}
+    <div class="about-text">
+        {{ site.formatted_about|safe }}
+    </div>
+    {% else %}
+    <p>This is my personal website where I share my blog posts, projects, and professional information.</p>
+    {% endif %}
+</div>
+
+<div class="row mt-5">
+    <!-- Latest Blog Posts -->
+    <div class="col-md-6">
+        <h2>Latest Blog Posts</h2>
+        <hr>
+        {% if latest_posts %}
+            {% for post in latest_posts %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ post.get_absolute_url }}" class="text-decoration-none">{{ post.title }}</a>
+                        </h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ post.publish|date:"F j, Y" }}</h6>
+                        <div class="card-text">{{ post.formatted_summary|safe }}</div>
+                        <a href="{{ post.get_absolute_url }}" class="btn btn-sm" style="background-color: var(--primary-color); color: white;">Read More</a>
+                    </div>
+                </div>
+            {% endfor %}
+            <a href="{% url 'blog:post_list' %}" class="btn btn-outline-secondary">View All Posts</a>
+        {% else %}
+            <p>No blog posts available yet.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Featured Projects -->
+    <div class="col-md-6">
+        <h2>Featured Projects</h2>
+        <hr>
+        {% if featured_projects %}
+            {% for project in featured_projects %}
+                <div class="card mb-3">
+                    {% if project.image %}
+                        <img src="{{ project.image.url }}" class="card-img-top" alt="{{ project.title }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ project.get_absolute_url }}" class="text-decoration-none">{{ project.title }}</a>
+                        </h5>
+                        <div class="card-text">{{ project.formatted_description|safe|truncatechars_html:150 }}</div>
+                        <a href="{{ project.get_absolute_url }}" class="btn btn-sm" style="background-color: var(--primary-color); color: white;">View Project</a>
+                    </div>
+                </div>
+            {% endfor %}
+            <a href="{% url 'projects:project_list' %}" class="btn btn-outline-secondary">View All Projects</a>
+        {% else %}
+            <p>No projects available yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

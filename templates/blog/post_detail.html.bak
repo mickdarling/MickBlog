@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ post.title }} - {{ SITE_TITLE }}{% endblock %}
+
+{% block meta_description %}{{ post.summary|truncatewords:30 }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <article class="blog-post">
+            <h1 class="blog-post-title mb-1">{{ post.title }}</h1>
+            
+            <p class="blog-post-meta text-muted mb-4">
+                {{ post.publish|date:"F j, Y" }} by {{ post.author.get_full_name|default:post.author.username }}
+                {% if post.category %}
+                in <a href="{{ post.category.get_absolute_url }}">{{ post.category.name }}</a>
+                {% endif %}
+            </p>
+            
+            <div class="blog-post-content mb-5">
+                {{ post.formatted_content|safe }}
+            </div>
+        </article>
+        
+        <hr class="my-5">
+        
+        <!-- Post navigation -->
+        <nav class="blog-post-nav">
+            <div class="row">
+                {% if prev_post %}
+                <div class="col-md-6">
+                    <a href="{{ prev_post.get_absolute_url }}" class="text-decoration-none">
+                        <div class="d-flex flex-column">
+                            <span class="text-muted">Previous Post</span>
+                            <span>{{ prev_post.title }}</span>
+                        </div>
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if next_post %}
+                <div class="col-md-6 text-md-end">
+                    <a href="{{ next_post.get_absolute_url }}" class="text-decoration-none">
+                        <div class="d-flex flex-column">
+                            <span class="text-muted">Next Post</span>
+                            <span>{{ next_post.title }}</span>
+                        </div>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </nav>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ project.title }} - {{ SITE_TITLE }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <article class="project">
+            <h1 class="mb-3">{{ project.title }}</h1>
+            
+            <div class="mb-4">
+                {% if project.status == 'in_progress' %}
+                    <span class="badge bg-warning text-dark">In Progress</span>
+                {% elif project.status == 'completed' %}
+                    <span class="badge bg-success">Completed</span>
+                {% elif project.status == 'archived' %}
+                    <span class="badge bg-secondary">Archived</span>
+                {% endif %}
+                
+                {% if project.featured %}
+                    <span class="badge bg-primary">Featured</span>
+                {% endif %}
+                
+                <span class="text-muted ms-2">
+                    Started: {{ project.start_date|date:"F Y" }}
+                    {% if project.end_date %}
+                        &mdash; Completed: {{ project.end_date|date:"F Y" }}
+                    {% endif %}
+                </span>
+            </div>
+            
+            {% if project.image %}
+                <div class="mb-4">
+                    <img src="{{ project.image.url }}" class="img-fluid rounded" alt="{{ project.title }}">
+                </div>
+            {% endif %}
+            
+            {% if project.technologies.all %}
+                <div class="mb-4">
+                    <h5>Technologies:</h5>
+                    {% for tech in project.technologies.all %}
+                        <span class="badge bg-light text-dark me-1 mb-1">{{ tech.name }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="project-description mb-4">
+                {{ project.formatted_description|safe }}
+            </div>
+            
+            <div class="project-links mb-5">
+                {% if project.github_url %}
+                    <a href="{{ project.github_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-dark me-2">
+                        <i class="fab fa-github me-1"></i> View on GitHub
+                    </a>
+                {% endif %}
+                
+                {% if project.project_url %}
+                    <a href="{{ project.project_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt me-1"></i> Live Demo
+                    </a>
+                {% endif %}
+            </div>
+            
+            <hr class="my-5">
+            
+            <div class="text-center">
+                <a href="{% url 'projects:project_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Projects
+                </a>
+            </div>
+        </article>
+    </div>
+</div>
+{% endblock %}

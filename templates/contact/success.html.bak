@@ -1,0 +1,22 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ SITE_TITLE }} - Message Sent{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                <h1 class="mt-3 mb-4">Message Sent Successfully!</h1>
+                <p class="lead">Thank you for contacting me. I'll get back to you as soon as possible.</p>
+                
+                <div class="mt-4">
+                    <a href="{% url 'core:home' %}" class="btn btn-primary me-2">Return to Home</a>
+                    <a href="{% url 'contact:contact' %}" class="btn btn-outline-secondary">Send Another Message</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

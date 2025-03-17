@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-cache-id="{{ cache_buster }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- SEO meta description - uses page-specific description or falls back to site-wide default -->
+    <meta name="description" content="{% block meta_description %}{{ site.meta_description }}{% endblock %}">
+    
+    <!-- Cache control headers for development auto-refresh functionality -->
+    <!-- These ensure the browser always fetches fresh content rather than using cached versions -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Cache busting with dynamic timestamp from context processor: {{ cache_buster }} -->
+    
+    <title>{% block title %}{{ SITE_TITLE }}{% endblock %}</title>
+    
+    <!-- External CSS dependencies -->
+    <!-- Bootstrap 5 for responsive layout and components -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons including social media and UI elements -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Dynamic CSS variables and custom styling -->
+    <style>
+        /* CSS variables from site configuration (via context processor) */
+        /* These allow easy theming without editing template files */
+        :root {
+            --primary-color: {{ PRIMARY_COLOR }};
+            --secondary-color: {{ SECONDARY_COLOR }};
+        }
+        
+        /* Custom styling injection point for styles from site_config.md */
+        {% block custom_css %}{% endblock %}
+    </style>
+    
+    <!-- Hook for page-specific head elements -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body data-cache-key="{{ cache_buster }}"
+      data-timestamp="{{ cache_buster }}" 
+      data-site-title="{{ SITE_TITLE }}" 
+      data-site-brand="{{ SITE_BRAND }}">
+    <!-- Navigation bar component -->
+    {% include 'base/navbar.html' %}
+    
+    <!-- Main content area with Bootstrap container -->
+    <main class="container mt-4">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer component -->
+    {% include 'base/footer.html' %}
+    
+    <!-- JavaScript dependencies -->
+    <!-- Bootstrap Bundle includes Popper for tooltips/popovers -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Development Mode: Auto-refresh functionality -->
+    <!-- This script enables auto-refresh during development to see changes instantly -->
+    <!-- In production with DEBUG=False, this behavior would be disabled -->
+    <script>
+        // Auto-refresh when page regains focus (switching back to tab)
+        // This ensures the page shows the latest content when returning to it
+        window.addEventListener('focus', function() {
+            location.reload(true);
+        });
+        
+        // Periodic refresh while the page is visible
+        // This makes development easier by automatically showing changes
+        function setupRefresh() {
+            var lastReloadTime = new Date().getTime();
+            
+            setInterval(function() {
+                var now = new Date().getTime();
+                // Only reload if:
+                // 1. Page is visible (active tab)
+                // 2. At least 5 seconds have passed since last reload
+                if (document.visibilityState === 'visible' && now - lastReloadTime > 5000) {
+                    lastReloadTime = now;
+                    location.reload(true);
+                }
+            }, 5000);
+        }
+        
+        // Initialize the auto-refresh functionality
+        setupRefresh();
+    </script>
+    
+    <!-- Hook for page-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
