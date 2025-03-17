@@ -9,6 +9,7 @@ A Django-based personal website with blog, projects portfolio, resume, and conta
 - **Resume** - Display your education, experience, skills, and certifications
 - **Contact** - Contact form with security features
 - **Easy Customization** - Update content and styling through markdown templates
+- **AI-Powered Configuration** - Use the integrated AI assistant to edit site configuration
 
 ## Installation
 
@@ -76,7 +77,11 @@ docker-compose up -d --build
 
 ### Site Configuration
 
-Edit the `site_config.md` file to customize:
+You have two ways to customize your site:
+
+#### 1. Manual Editing
+
+Edit the `site_config.md` file directly to customize:
 
 - Site information (title, tagline, etc.)
 - Colors and styling
@@ -91,9 +96,38 @@ python manage.py update_site_config
 
 With Docker, the site_config.md file is mounted as a volume, so changes are automatically applied without rebuilding the container.
 
+#### 2. AI-Powered Editor (Recommended)
+
+Use the integrated AI assistant to edit your site configuration:
+
+1. Log in to the admin panel
+2. Go to Site Configuration
+3. Click the "AI Editor" button
+4. Describe the changes you want in natural language
+5. Review and apply the suggested changes
+
+The AI assistant can help with tasks like:
+- Updating site colors and styling
+- Changing personal information
+- Editing about page content
+- Adding social media links
+- Customizing CSS
+
+To use this feature, you need an Anthropic API key. You have two options:
+
+**Option 1: Environment Variable** (recommended for development)
+1. Get an API key from [Anthropic Console](https://console.anthropic.com/)
+2. Add it to your `.env` file as `ANTHROPIC_API_KEY=your_key_here`
+
+**Option 2: Site Configuration** (recommended for production)
+1. Get an API key from [Anthropic Console](https://console.anthropic.com/)
+2. Add it to the "Anthropic API key" field in the Site Configuration admin 
+
+For detailed instructions on using the AI editor, see [AI_EDITOR_USAGE.md](AI_EDITOR_USAGE.md)
+
 ### Custom Styling
 
-Add custom CSS in the "Custom CSS" section of `site_config.md`.
+Add custom CSS in the "Custom CSS" section of `site_config.md` or use the AI assistant to generate and apply CSS changes.
 
 ### Content Management
 
@@ -153,3 +187,4 @@ Created with:
 - Nginx
 - PostgreSQL
 - Gunicorn
+- Claude AI (for AI-powered configuration editor)

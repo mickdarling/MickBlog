@@ -1,0 +1,78 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static 'core/css/ai_editor.css' %}">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'admin/js/jquery.init.js' %}"></script>
+  <script src="{% static 'core/js/ai_editor.js' %}"></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+  &rsaquo; <a href="{% url 'admin:core_siteconfig_changelist' %}">Site configurations</a>
+  &rsaquo; AI Site Configuration Editor
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned ai-editor-container">
+  <h1>AI Site Configuration Editor</h1>
+  
+  {% if not api_key_configured %}
+    <div class="errornote">
+      <p>Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your environment variables.</p>
+    </div>
+  {% else %}
+  
+  <div class="ai-editor-wrapper">
+    <!-- Chat interface -->
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="message system">
+          <p>Hello! I'm your AI assistant for editing the site configuration. How would you like to update your site?</p>
+        </div>
+      </div>
+      
+      <div class="chat-input">
+        <textarea id="userInput" placeholder="Type your question or request..."></textarea>
+        <button id="sendButton" type="button">Send</button>
+      </div>
+    </div>
+    
+    <!-- Config editor -->
+    <div class="config-editor">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="current">Current Config</button>
+        <button class="tab-button" data-tab="suggested">Suggested Changes</button>
+      </div>
+      
+      <div class="tab-content active" id="currentTab">
+        <pre id="currentConfig">{{ current_config }}</pre>
+      </div>
+      
+      <div class="tab-content" id="suggestedTab">
+        <pre id="suggestedConfig">No suggested changes yet</pre>
+        <div class="button-group">
+          <button id="applyChangesButton" disabled>Apply Changes</button>
+          <button id="copyChangesButton" disabled>Copy to Clipboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Spinner for loading state -->
+  <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+    <div class="spinner"></div>
+    <p>Processing your request...</p>
+  </div>
+  
+  {% endif %}
+</div>
+{% endblock %}

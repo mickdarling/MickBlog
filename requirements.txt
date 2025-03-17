@@ -33,3 +33,4 @@ pyOpenSSL==25.0.0
 
 # Utilities
 PyYAML==6.0.2
+requests==2.31.0
