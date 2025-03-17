@@ -6,11 +6,11 @@ This markdown file allows you to easily customize the content, style, and config
 
 ```yaml
 brand: MB
-footer_text: "\xA9 2025 Mick Blog. All rights reserved."
+footer_text: "© 2025 Your Name. All rights reserved."
 meta_description: Personal blog and portfolio site showcasing blog posts, projects,
   resume, and contact information.
 tagline: Projects, Posts, Resume, and Contact Info
-title: Mick's Blog for Fun and Profit
+title: Your Personal Blog
 
 ```
 
@@ -44,14 +44,14 @@ Add any custom CSS below. This will be applied to the entire site.
 Write your about information in markdown format below.
 
 ```markdown
-
+I am a software developer with experience in web development, machine learning, and data analysis. This is my personal blog and portfolio site.
 ```
 
 ## Contact Information
 
 ```yaml
 address: ''
-email: mick@mickdarling.com
+email: your.email@example.com
 phone: ''
 
 ```
@@ -59,11 +59,11 @@ phone: ''
 ## Social Media
 
 ```yaml
-bluesky_url: https://bsky.app/profile/mickdarling.bsky.social
-facebook_url: https://facebook.com/mickdarling
-github_url: https://github.com/mickdarling
-instagram_url: https://instagram.com/mickdarling
-linkedin_url: https://linkedin.com/in/mickdarling
+bluesky_url: https://bsky.app/profile/yourusername.bsky.social
+facebook_url: https://facebook.com/yourusername
+github_url: https://github.com/yourusername
+instagram_url: https://instagram.com/yourusername
+linkedin_url: https://linkedin.com/in/yourusername
 
 ```
 
