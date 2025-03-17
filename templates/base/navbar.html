@@ -1,0 +1,48 @@
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--primary-color);">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'core:home' %}">{{ SITE_BRAND }}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'core:home' %}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/blog/' in request.path %}active{% endif %}" href="{% url 'blog:post_list' %}">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/projects/' in request.path %}active{% endif %}" href="{% url 'projects:project_list' %}">Projects</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/resume/' in request.path %}active{% endif %}" href="{% url 'resume:resume' %}">Resume</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if '/contact/' in request.path %}active{% endif %}" href="{% url 'contact:contact' %}">Contact</a>
+                </li>
+            </ul>
+            
+            <!-- Social media links -->
+            <div class="navbar-nav">
+                {% if site.github_url %}
+                <a class="nav-link" href="{{ site.github_url }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fab fa-github"></i>
+                </a>
+                {% endif %}
+                
+                {% if site.linkedin_url %}
+                <a class="nav-link" href="{{ site.linkedin_url }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fab fa-linkedin"></i>
+                </a>
+                {% endif %}
+                
+                {% if site.bluesky_url %}
+                <a class="nav-link" href="{{ site.bluesky_url }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-solid fa-cloud bluesky-icon"></i> <!-- Custom styled Bluesky icon -->
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

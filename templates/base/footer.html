@@ -1,0 +1,50 @@
+<footer class="footer mt-auto py-3 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1">{{ SITE_TITLE }}</p>
+                <p class="text-muted">{% if site.footer_text %}{{ site.footer_text }}{% else %}&copy; {% now "Y" %} All rights reserved.{% endif %}</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-1">
+                    {% if site.email %}
+                    <a href="mailto:{{ site.email }}" class="text-decoration-none me-2">
+                        <i class="fas fa-envelope"></i> {{ site.email }}
+                    </a>
+                    {% endif %}
+                </p>
+                <p class="mb-0">
+                    {% if site.github_url %}
+                    <a href="{{ site.github_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none me-2">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% if site.linkedin_url %}
+                    <a href="{{ site.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none me-2">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% if site.bluesky_url %}
+                    <a href="{{ site.bluesky_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none me-2">
+                        <i class="fa-solid fa-cloud bluesky-icon"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% if site.facebook_url %}
+                    <a href="{{ site.facebook_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none me-2">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% if site.instagram_url %}
+                    <a href="{{ site.instagram_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,108 @@
+# MickBlog - Personal Blog and Portfolio Site
+
+A Django-based personal website with blog, projects portfolio, resume, and contact sections. Easy to customize with markdown templates.
+
+## Features
+
+- **Blog** - Post articles in markdown format with categories
+- **Projects** - Showcase your portfolio with detailed project pages
+- **Resume** - Display your education, experience, skills, and certifications
+- **Contact** - Contact form with security features
+- **Easy Customization** - Update content and styling through markdown templates
+
+## Installation
+
+1. Clone the repository
+```bash
+git clone <repository-url>
+cd MickBlog
+```
+
+2. Create a virtual environment and install dependencies
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+3. Apply migrations
+```bash
+python manage.py migrate
+```
+
+4. Create a superuser
+```bash
+python manage.py createsuperuser
+```
+
+5. Run the development server
+```bash
+python manage.py runserver
+```
+
+6. Apply site configuration from the template
+```bash
+python manage.py update_site_config
+```
+
+## Customization
+
+### Site Configuration
+
+Edit the `site_config.md` file to customize:
+
+- Site information (title, tagline, etc.)
+- Colors and styling
+- About content
+- Contact information
+- Social media links
+
+After editing, run:
+```bash
+python manage.py update_site_config
+```
+
+### Custom Styling
+
+Add custom CSS in the "Custom CSS" section of `site_config.md`.
+
+### Content Management
+
+Access the admin panel at `/admin` to manage:
+
+- Blog posts and categories
+- Projects and technologies
+- Resume sections (education, experience, skills, certifications)
+- Site configuration
+
+## Security Features
+
+The site includes several security features:
+
+- Environment-based configuration
+- CSRF protection
+- XSS protection
+- Content security policy headers
+- HTTPS enforcement (in production)
+- HSTS headers (in production)
+- IP logging for contact form submissions
+
+## Deployment
+
+For production deployment:
+
+1. Set `DEBUG=False` in the `.env` file
+2. Configure a proper database (PostgreSQL recommended)
+3. Set up static and media files serving
+4. Configure a proper mail backend
+5. Set a strong SECRET_KEY
+6. Configure ALLOWED_HOSTS
+
+## Credits
+
+Created with:
+
+- Django
+- Bootstrap 5
+- Markdownx
+- Font Awesome

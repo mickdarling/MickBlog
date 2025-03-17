@@ -1,0 +1,48 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ SITE_TITLE }} - About{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h1 class="mb-4">About</h1>
+        
+        {% if site.about_text %}
+            <div class="about-content">
+                {{ site.formatted_about|safe }}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <p>No about information has been added yet. You can update this in the admin panel or by updating the markdown template.</p>
+            </div>
+        {% endif %}
+        
+        <hr class="my-4">
+        
+        <h2>Contact Information</h2>
+        <ul class="list-unstyled">
+            {% if site.email %}
+                <li class="mb-2">
+                    <i class="fas fa-envelope me-2"></i> <a href="mailto:{{ site.email }}">{{ site.email }}</a>
+                </li>
+            {% endif %}
+            
+            {% if site.phone %}
+                <li class="mb-2">
+                    <i class="fas fa-phone me-2"></i> {{ site.phone }}
+                </li>
+            {% endif %}
+            
+            {% if site.address %}
+                <li class="mb-2">
+                    <i class="fas fa-map-marker-alt me-2"></i> {{ site.address }}
+                </li>
+            {% endif %}
+        </ul>
+        
+        <div class="mt-4">
+            <a href="{% url 'contact:contact' %}" class="btn btn-primary">Contact Me</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
