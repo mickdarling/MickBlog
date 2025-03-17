@@ -1,0 +1,22 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Ensure shell scripts use LF
+*.sh text eol=lf
+
+# Python files
+*.py text eol=lf
+*.pyw text eol=lf
+
+# Ignore binary files in diff
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pem binary
