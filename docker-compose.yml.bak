@@ -1,60 +1,23 @@
 version: '3.8'
 
 services:
-  web:
-    build: .
-    container_name: mickblog
+  dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: mickblog_dev
     restart: always
     volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-      - ./site_config.md:/app/site_config.md
+      - .:/app
     ports:
       - "8000:8000"
-    env_file:
-      - .env.docker
-    depends_on:
-      - db
-    networks:
-      - mickblog_network
-
-  db:
-    image: postgres:14-alpine
-    container_name: mickblog_db
-    restart: always
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - .env.docker
     environment:
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_DB=${DB_NAME}
-    networks:
-      - mickblog_network
-
-  nginx:
-    image: nginx:alpine
-    container_name: mickblog_nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
-      - ./nginx:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/ssl
-    depends_on:
-      - web
-    networks:
-      - mickblog_network
-
-volumes:
-  postgres_data:
-  static_volume:
-  media_volume:
-
-networks:
-  mickblog_network:
-    driver: bridge
+      - DEBUG=True
+      - SECRET_KEY=dev-insecure-key
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@example.com
+      - DJANGO_SUPERUSER_PASSWORD=admin
+    command: >
+      bash -c "python manage.py migrate &&
+               python manage.py update_site_config &&
+               python manage.py runserver 0.0.0.0:8000"
