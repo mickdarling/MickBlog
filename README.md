@@ -16,7 +16,7 @@ A Django-based personal website with blog, projects portfolio, resume, and conta
 
 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/mickdarling/MickBlog.git
 cd MickBlog
 ```
 
@@ -51,7 +51,7 @@ python manage.py update_site_config
 
 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/mickdarling/MickBlog.git
 cd MickBlog
 ```
 
