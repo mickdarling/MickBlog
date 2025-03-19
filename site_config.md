@@ -5,20 +5,19 @@ This markdown file allows you to easily customize the content, style, and config
 ## Site Information
 
 ```yaml
-brand: MB
-footer_text: "© 2025 Your Name. All rights reserved."
-meta_description: Personal blog and portfolio site showcasing blog posts, projects,
-  resume, and contact information.
-tagline: Projects, Posts, Resume, and Contact Info
-title: Your Personal Blog
+brand: TVB
+footer_text: "© 2025 Mick Darling. All rights reserved."
+meta_description: Personal blog and portfolio site showcasing blog posts, projects, resume, and contact information.
+tagline: Mick Darling's Projects, Posts, Resume, and Contact Info
+title: TheVibeBlog
 
 ```
 
 ## Colors and Styling
 
 ```yaml
-primary_color: '#007bff'
-secondary_color: '#6c757d'
+primary_color: '#6495ed'
+secondary_color: '#add8e6'
 
 ```
 
@@ -27,16 +26,7 @@ secondary_color: '#6c757d'
 Add any custom CSS below. This will be applied to the entire site.
 
 ```css
-/* Custom Bluesky icon styling */
-.bluesky-icon {
-  color: #1185fe;  /* Bluesky's brand color */
-  font-size: 1.1em;
-}
-
-/* Make the nav icons a bit larger for better visibility */
-.navbar-nav .nav-link i {
-  font-size: 1.2em;
-}
+/* Custom CSS styles */
 ```
 
 ## About Me
@@ -44,14 +34,18 @@ Add any custom CSS below. This will be applied to the entire site.
 Write your about information in markdown format below.
 
 ```markdown
-I am a software developer with experience in web development, machine learning, and data analysis. This is my personal blog and portfolio site.
-```
+This is my customized Blog project The Vibe Blog.  
 
+It is one, among many other projects, that I will populate the Projects section with. 
+
+I built this VibeCoding with ClaudeCode and added an easy to use AI interface on top of a Django platform so I can easily update the site dynamically with natural language, and I don't have to remember any workflow beyond asking the site to do something.
+```
+"
 ## Contact Information
 
 ```yaml
 address: ''
-email: your.email@example.com
+email: mick@mickdarling.com
 phone: ''
 
 ```
@@ -59,11 +53,11 @@ phone: ''
 ## Social Media
 
 ```yaml
-bluesky_url: https://bsky.app/profile/yourusername.bsky.social
-facebook_url: https://facebook.com/yourusername
-github_url: https://github.com/yourusername
-instagram_url: https://instagram.com/yourusername
-linkedin_url: https://linkedin.com/in/yourusername
+bluesky_url: https://bsky.app/profile/mickdarling.bsky.social
+facebook_url: https://facebook.com/mickdarling
+github_url: https://github.com/mickdarling
+instagram_url: https://instagram.com/mickdarling
+linkedin_url: https://linkedin.com/in/mickdarling
 
 ```
 
@@ -71,6 +65,13 @@ linkedin_url: https://linkedin.com/in/yourusername
 
 ```yaml
 google_analytics_id: UA-XXXXXXXXX-X
+
+```
+
+## AI Configuration
+
+```yaml
+anthropic_api_key: # API key removed for security
 
 ```
 

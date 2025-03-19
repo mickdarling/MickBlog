@@ -8,8 +8,41 @@
 
 {% block extrahead %}
   {{ block.super }}
+  <!-- Load jQuery from CDN -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  
+  <!-- Make jQuery available to Django admin -->
+  <script>
+    if (window.jQuery && !window.django) {
+      window.django = { jQuery: window.jQuery };
+      console.log('jQuery loaded from CDN and assigned to django.jQuery');
+    }
+  </script>
+  
+  <!-- Load admin jQuery -->
   <script src="{% static 'admin/js/jquery.init.js' %}"></script>
-  <script src="{% static 'core/js/ai_editor.js' %}"></script>
+  
+  <!-- AI Editor js -->
+  <script src="{% static 'core/js/ai_editor.js' %}?v={% now 'U' %}"></script>
+  
+  <!-- Test script -->
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM content loaded - direct script in template');
+      
+      // Log jQuery availability for debugging
+      console.log('jQuery available:', !!window.jQuery);
+      console.log('django.jQuery available:', !!(window.django && window.django.jQuery));
+      
+      // Test jQuery by adding a direct event handler
+      if (window.jQuery) {
+        jQuery('#testButton').on('click', function() {
+          console.log('Test button clicked - jQuery click handler working');
+          alert('jQuery is working properly!');
+        });
+      }
+    });
+  </script>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -23,11 +56,145 @@
 
 {% block content %}
 <div class="module aligned ai-editor-container">
-  <h1>AI Site Configuration Editor</h1>
+  
+  {% if debug %}
+  <button id="testButton" style="margin-bottom: 10px; padding: 5px 10px; background-color: #333; color: white; border: none; border-radius: 4px; cursor: pointer;">Test JavaScript Functionality</button>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('testButton').addEventListener('click', function() {
+        alert('Test button clicked - Vanilla JS working');
+      });
+    });
+  </script>
+  {% endif %}
+  
+  <!-- Hidden debug information for admin use -->
+  {% if debug %}
+  <div style="background-color: #f8f9fa; border: 1px solid #ddd; padding: 10px; margin-bottom: 15px; font-family: monospace;">
+    <h3>Debug Information</h3>
+    <p>API Key Configured: {{ api_key_configured }}</p>
+    <p>Settings Key Present: {{ debug_info.settings_key_present }}</p>
+    <p>Model Key Present: {{ debug_info.model_key_present }}</p>
+    <p>API Key First Chars: {{ debug_info.api_key_first_chars }}</p>
+    <button onclick="testDirectConfig()" style="background-color: #007bff; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer;">Test Direct Config</button>
+    <button onclick="testSimpleJSON()" style="background-color: #17a2b8; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; margin-left: 10px;">Test Simple JSON</button>
+  </div>
+  {% endif %}
+  
+  <script>
+    // Test direct notification function
+    function testNotification() {
+      console.log('Testing notification function');
+      const notification = document.createElement('div');
+      notification.className = 'notification success';
+      notification.textContent = 'Test notification';
+      notification.style.zIndex = '9999';
+      notification.style.position = 'fixed';
+      notification.style.bottom = '20px';
+      notification.style.right = '20px';
+      notification.style.padding = '15px 20px';
+      notification.style.backgroundColor = '#4CAF50';
+      notification.style.color = 'white';
+      document.body.appendChild(notification);
+    }
+    
+    // Test actions on the config editor
+    function testConfigEditor() {
+      console.log('Testing config editor');
+      const configEditor = document.getElementById('configEditor');
+      if (configEditor) {
+        console.log('Config editor found, current length:', configEditor.value.length);
+        return true;
+      } else {
+        console.error('Config editor not found!');
+        return false;
+      }
+    }
+    
+    // Test a simple JSON endpoint
+    function testSimpleJSON() {
+      alert('Testing simple JSON endpoint');
+      
+      fetch('/test_json/')
+        .then(response => {
+          alert(`Response status: ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          alert(`Success: ${data.success}, Message: ${data.message}`);
+          console.log('JSON response:', data);
+        })
+        .catch(error => {
+          alert(`Error: ${error.message}`);
+          console.error('Error:', error);
+        });
+    }
+    
+    // Direct script in the HTML to test the config endpoint
+    function testDirectConfig() {
+      alert('Test Direct Config clicked');
+      
+      // Get CSRF token
+      function getCsrfToken() {
+        const cookieValue = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrftoken='))
+          ?.split('=')[1];
+        return cookieValue || '';
+      }
+      
+      console.log("About to make fetch request to /ai_config/");
+      // Make direct request with updated path
+      fetch('/ai_config/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+          message: document.getElementById('userInput').value.trim() || 'Change the title to Vibe Blog'
+        })
+      })
+      .then(response => {
+        alert(`Response status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        alert('Response received: ' + (data.config ? 'YES' : 'NO'));
+        console.log('Config response:', data);
+        
+        if (data.config) {
+          // Update the config text
+          document.getElementById('suggestedConfig').textContent = data.config;
+          
+          // Enable the Apply and Copy buttons
+          document.getElementById('applyChangesButton').disabled = false;
+          document.getElementById('copyChangesButton').disabled = false;
+          
+          // Switch to the suggested tab
+          document.querySelector('.tab-button[data-tab="suggested"]').click();
+          
+          // Add a system message to chat
+          const chatMessages = document.getElementById('chatMessages');
+          if (chatMessages) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message system';
+            messageElement.innerHTML = '<p>Configuration changes are available in the "Suggested Changes" tab</p>';
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        }
+      })
+      .catch(error => {
+        alert(`Error: ${error.message}`);
+        console.error('Error:', error);
+      });
+    }
+  </script>
   
   {% if not api_key_configured %}
     <div class="errornote">
-      <p>Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your environment variables.</p>
+      <p>Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your environment variables or set it in the Site Configuration admin interface.</p>
     </div>
   {% else %}
   
@@ -43,26 +210,26 @@
       <div class="chat-input">
         <textarea id="userInput" placeholder="Type your question or request..."></textarea>
         <button id="sendButton" type="button">Send</button>
+        <button id="generateConfigButton" type="button" style="margin-left: 10px; background-color: #28a745;">Generate Config</button>
+        {% if debug %}
+        <button onclick="alert('Direct click handler works')" style="margin-left: 10px; background-color: #dc3545;">Test Alert</button>
+        {% endif %}
       </div>
     </div>
     
     <!-- Config editor -->
     <div class="config-editor">
-      <div class="tabs">
-        <button class="tab-button active" data-tab="current">Current Config</button>
-        <button class="tab-button" data-tab="suggested">Suggested Changes</button>
+      <div class="editor-header">
+        <h3>Site Configuration</h3>
       </div>
       
-      <div class="tab-content active" id="currentTab">
-        <pre id="currentConfig">{{ current_config }}</pre>
+      <div class="editor-content">
+        <textarea id="configEditor" class="config-textarea">{{ current_config }}</textarea>
       </div>
       
-      <div class="tab-content" id="suggestedTab">
-        <pre id="suggestedConfig">No suggested changes yet</pre>
-        <div class="button-group">
-          <button id="applyChangesButton" disabled>Apply Changes</button>
-          <button id="copyChangesButton" disabled>Copy to Clipboard</button>
-        </div>
+      <div class="button-group">
+        <button id="applyChangesButton" onclick="console.log('Direct click handler on apply button')">Apply Changes</button>
+        <button id="undoChangesButton" onclick="console.log('Direct click handler on undo button')">Undo Changes</button>
       </div>
     </div>
   </div>

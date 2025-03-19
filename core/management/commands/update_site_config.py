@@ -149,12 +149,32 @@ class Command(BaseCommand):
         Returns:
             str: Extracted markdown content, or None if section not found
         """
-        pattern = rf'## {section_name}\s*```markdown\s*(.*?)\s*```'
+        # Debug output
+        print(f"Looking for markdown block in section: '{section_name}'")
+        content_snippet = content[content.find(f"## {section_name}"):content.find(f"## {section_name}") + 300]
+        print(f"Section content snippet: {content_snippet[:100]}...")
+        
+        # First try with explicit markdown tag - most specific pattern
+        pattern = rf'## {section_name}[^\#]*?```markdown\s*(.*?)\s*```'
         match = re.search(pattern, content, re.DOTALL)
         
         if match:
+            print(f"Found match with markdown tag for section '{section_name}'")
             return match.group(1)
+        else:
+            print(f"No match with markdown tag for section '{section_name}'")
         
+        # If not found, try with any code block following the section header
+        pattern = rf'## {section_name}[^\#]*?```(?:markdown)?\s*(.*?)\s*```'
+        match = re.search(pattern, content, re.DOTALL)
+        
+        if match:
+            print(f"Found match with generic code block for section '{section_name}'")
+            return match.group(1)
+        else:
+            print(f"No match with generic code block for section '{section_name}'")
+            
+        print(f"WARNING: Could not find markdown block for section '{section_name}'")
         return None
     
     def _parse_code_block(self, content, section_name, language):

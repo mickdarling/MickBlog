@@ -52,7 +52,7 @@ class SiteConfig(models.Model):
     meta_description = models.TextField(blank=True, help_text="SEO description for the site") 
     
     # AI configuration
-    anthropic_api_key = models.CharField(max_length=100, blank=True, help_text="Anthropic API key for AI-powered site configuration editor")
+    anthropic_api_key = models.CharField(max_length=255, blank=True, help_text="Anthropic API key for AI-powered site configuration editor - usually 83 characters or longer")
     
     # Public class variable to control signal triggering
     # This avoids attribute errors when checking for _skip_signal
