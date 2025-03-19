@@ -19,10 +19,12 @@
         const sendButton = document.getElementById('sendButton');
         const generateConfigButton = document.getElementById('generateConfigButton');
         const applyChangesButton = document.getElementById('applyChangesButton');
-        const copyChangesButton = document.getElementById('copyChangesButton');
+        const undoChangesButton = document.getElementById('undoChangesButton');
         const loadingSpinner = document.getElementById('loadingSpinner');
-        const currentConfigElement = document.getElementById('currentConfig');
-        const suggestedConfigElement = document.getElementById('suggestedConfig');
+        const configEditor = document.getElementById('configEditor');
+        
+        // Store the original configuration for undo functionality
+        let originalConfig = configEditor ? configEditor.value : '';
         
         // Log DOM elements found
         console.log('AI Editor: DOM elements found:', {
@@ -31,10 +33,9 @@
             sendButton: !!sendButton,
             generateConfigButton: !!generateConfigButton,
             applyChangesButton: !!applyChangesButton,
-            copyChangesButton: !!copyChangesButton,
+            undoChangesButton: !!undoChangesButton,
             loadingSpinner: !!loadingSpinner,
-            currentConfigElement: !!currentConfigElement,
-            suggestedConfigElement: !!suggestedConfigElement
+            configEditor: !!configEditor
         });
         
         // Add welcome message
@@ -44,29 +45,6 @@
         
         // Chat history for context management
         let messageHistory = [];
-        
-        // Tab switching functionality using vanilla JS
-        const tabButtons = document.querySelectorAll('.tab-button');
-        
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Remove active class from all buttons
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                // Get the tab id from the data-tab attribute
-                const tabId = this.getAttribute('data-tab');
-                
-                // Hide all tab content
-                document.querySelectorAll('.tab-content').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                
-                // Show the selected tab content
-                document.getElementById(tabId + 'Tab').classList.add('active');
-            });
-        });
         
         // Send message when button is clicked
         if (sendButton) {
@@ -98,18 +76,28 @@
         
         // Apply changes button
         if (applyChangesButton) {
+            console.log('Setting up apply changes button listener');
             applyChangesButton.addEventListener('click', function() {
-                const suggestedConfig = suggestedConfigElement.textContent;
+                console.log('Apply changes button clicked');
                 
-                if (!suggestedConfig || suggestedConfig === 'No suggested changes yet') {
-                    showNotification('No changes to apply', 'error');
+                if (!configEditor) {
+                    console.error('Config editor element not found!');
+                    showNotification('Error: Config editor not found', 'error');
+                    return;
+                }
+                
+                const config = configEditor.value;
+                console.log('Config editor value available:', !!config);
+                
+                if (!config || config.trim() === '') {
+                    showNotification('No configuration to apply', 'error');
                     return;
                 }
                 
                 // Show loading spinner
                 loadingSpinner.style.display = 'flex';
                 
-                console.log('Applying changes with config:', suggestedConfig.substring(0, 50) + '...');
+                console.log('Applying changes with config:', config.substring(0, 50) + '...');
                 // Call the apply changes endpoint using fetch API with new path
                 fetch('/apply_changes/', {
                     method: 'POST',
@@ -118,7 +106,7 @@
                         'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({
-                        config: suggestedConfig
+                        config: config
                     })
                 })
                 .then(response => response.json())
@@ -128,26 +116,8 @@
                     if (response.success) {
                         showNotification('Configuration updated successfully', 'success');
                         
-                        // Update current config display
-                        currentConfigElement.textContent = suggestedConfig;
-                        
-                        // Reset the suggested config to prepare for next changes
-                        suggestedConfigElement.textContent = "No suggested changes yet";
-                        
-                        // Disable buttons until new changes are suggested
-                        if (applyChangesButton) {
-                            applyChangesButton.disabled = true;
-                        }
-                        
-                        if (copyChangesButton) {
-                            copyChangesButton.disabled = true;
-                        }
-                        
-                        // Switch back to current tab to show the applied changes
-                        const currentTab = document.querySelector('.tab-button[data-tab="current"]');
-                        if (currentTab) {
-                            currentTab.click();
-                        }
+                        // Update original config to match the newly applied config
+                        originalConfig = config;
                         
                         // Add system message
                         addMessage('Changes applied successfully! The site configuration has been updated.', 'system');
@@ -162,30 +132,18 @@
             });
         }
         
-        // Copy to clipboard button
-        if (copyChangesButton) {
-            copyChangesButton.addEventListener('click', function() {
-                const suggestedConfig = suggestedConfigElement.textContent;
-                
-                if (!suggestedConfig || suggestedConfig === 'No suggested changes yet') {
-                    showNotification('No changes to copy', 'error');
-                    return;
+        // Undo changes button
+        if (undoChangesButton) {
+            console.log('Setting up undo changes button listener');
+            undoChangesButton.addEventListener('click', function() {
+                console.log('Undo changes button clicked');
+                console.log('Original config available:', !!originalConfig);
+                if (configEditor && originalConfig) {
+                    configEditor.value = originalConfig;
+                    showNotification('Changes undone', 'info');
+                } else {
+                    console.error('Cannot undo changes: configEditor available:', !!configEditor, 'originalConfig available:', !!originalConfig);
                 }
-                
-                // Create temporary textarea element to copy from
-                const textarea = document.createElement('textarea');
-                textarea.value = suggestedConfig;
-                document.body.appendChild(textarea);
-                textarea.select();
-                
-                try {
-                    document.execCommand('copy');
-                    showNotification('Copied to clipboard!', 'success');
-                } catch (err) {
-                    showNotification('Failed to copy: ' + err, 'error');
-                }
-                
-                document.body.removeChild(textarea);
             });
         }
         
@@ -238,30 +196,15 @@
                     throw new Error(errorMessage);
                 }
                 
-                // Update suggested config if available
-                if (response.config && suggestedConfigElement) {
+                // Update config if available
+                if (response.config && configEditor) {
                     console.log('Config response content: ' + response.config.substring(0, 30) + '...');
                     
                     // Set the config content
-                    suggestedConfigElement.textContent = response.config;
-                    
-                    // Enable buttons
-                    if (applyChangesButton) {
-                        applyChangesButton.disabled = false;
-                    }
-                    
-                    if (copyChangesButton) {
-                        copyChangesButton.disabled = false;
-                    }
-                    
-                    // Switch to suggested tab
-                    const suggestedTab = document.querySelector('.tab-button[data-tab="suggested"]');
-                    if (suggestedTab) {
-                        suggestedTab.click();
-                    }
+                    configEditor.value = response.config;
                     
                     // Add system message
-                    addMessage('Configuration changes are available in the "Suggested Changes" tab', 'system');
+                    addMessage('Configuration changes have been updated in the editor. Review and click "Apply Changes" to save them.', 'system');
                 } else {
                     console.log('No config received from API');
                 }
@@ -373,62 +316,40 @@
                 // Return the response to continue the chain
                 return configResponse;
             })
-                .then(response => {
-                    // Hide loading spinner
-                    if (loadingSpinner) {
-                        loadingSpinner.style.display = 'none';
-                    }
+            .then(response => {
+                // Hide loading spinner
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
+                
+                // Update config if available
+                if (response.config && configEditor) {
+                    console.log("Received configuration from dedicated API call");
                     
-                    // Update suggested config if available
-                    if (response.config && suggestedConfigElement) {
-                        console.log("Received configuration from dedicated API call");
-                        
-                        // Log the first 100 chars of the config for debugging
-                        console.log(`Config content (first 100 chars): "${response.config.substring(0, 100)}..."`);
-                        
-                        // Add the configuration to the suggested config element
-                        suggestedConfigElement.textContent = response.config;
-                        
-                        // Enable buttons if we got a real config
-                        if (response.config.includes("Site Configuration")) {
-                            console.log("Config appears valid, enabling buttons");
-                            
-                            if (applyChangesButton) {
-                                applyChangesButton.disabled = false;
-                            }
-                            
-                            if (copyChangesButton) {
-                                copyChangesButton.disabled = false;
-                            }
-                            
-                            // Switch to suggested tab - find and click it
-                            const suggestedTab = document.querySelector('.tab-button[data-tab="suggested"]');
-                            if (suggestedTab) {
-                                suggestedTab.click();
-                            }
-                            
-                            // Add system message about configuration
-                            addMessage('Configuration changes are available in the "Suggested Changes" tab', 'system');
-                        } else {
-                            console.log("Config appears invalid, not enabling buttons");
-                            addMessage('Error: Unable to generate proper configuration changes', 'system');
-                        }
-                    } else {
-                        console.log("No config received from API");
-                        addMessage('No configuration changes were generated for this request', 'system');
-                    }
-                })
-                .catch(error => {
-                    // Hide loading spinner
-                    if (loadingSpinner) {
-                        loadingSpinner.style.display = 'none';
-                    }
+                    // Log the first 100 chars of the config for debugging
+                    console.log(`Config content (first 100 chars): "${response.config.substring(0, 100)}..."`);
                     
-                    const errorMsg = 'Error: ' + error.message;
-                    console.error(errorMsg);
-                    addMessage(errorMsg, 'system');
-                    showNotification(errorMsg, 'error');
-                });
+                    // Add the configuration to the editor
+                    configEditor.value = response.config;
+                    
+                    // Add system message about configuration
+                    addMessage('Configuration changes have been updated in the editor. Review and click "Apply Changes" to save them.', 'system');
+                } else {
+                    console.log("No config received from API");
+                    addMessage('No configuration changes were generated for this request', 'system');
+                }
+            })
+            .catch(error => {
+                // Hide loading spinner
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
+                
+                const errorMsg = 'Error: ' + error.message;
+                console.error(errorMsg);
+                addMessage(errorMsg, 'system');
+                showNotification(errorMsg, 'error');
+            });
         }
         
         // Function to add message to chat
@@ -459,29 +380,14 @@
                         
                         // Clean up the display text by replacing the large code block with a notice
                         cleanedContent = content.replace(markdownRegex, 
-                            '<em>[Configuration changes available in the "Suggested Changes" tab]</em>');
+                            '<em>[Configuration changes available in the editor]</em>');
                         
                         console.log("Cleaned content for display:", cleanedContent.substring(0, 100) + "...");
                         
-                        // Update the suggested config if we found a valid block
-                        if (markdownBlock && suggestedConfigElement) {
-                            console.log("Updating suggested config with extracted markdown");
-                            suggestedConfigElement.textContent = markdownBlock;
-                            
-                            // Enable buttons
-                            if (applyChangesButton) {
-                                applyChangesButton.disabled = false;
-                            }
-                            
-                            if (copyChangesButton) {
-                                copyChangesButton.disabled = false;
-                            }
-                            
-                            // Switch to suggested tab automatically
-                            const suggestedTab = document.querySelector('.tab-button[data-tab="suggested"]');
-                            if (suggestedTab) {
-                                suggestedTab.click();
-                            }
+                        // Update the config editor if we found a valid block
+                        if (markdownBlock && configEditor) {
+                            console.log("Updating editor with extracted markdown");
+                            configEditor.value = markdownBlock;
                         }
                     } else {
                         console.log("Failed to extract markdown block with regex");
@@ -510,6 +416,14 @@
         
         // Function to show notification
         function showNotification(message, type) {
+            console.log('Showing notification:', message, 'Type:', type);
+            
+            // Remove any existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(function(notification) {
+                notification.remove();
+            });
+            
             // Create notification element
             const notification = document.createElement('div');
             notification.className = 'notification ' + type;
@@ -518,14 +432,18 @@
             // Add to body
             document.body.appendChild(notification);
             
+            // Alert for testing
+            console.log('Notification created and added to DOM');
+            
             // Remove after 3 seconds
             setTimeout(function() {
+                console.log('Removing notification');
                 notification.style.animation = 'notificationFadeOut 0.3s forwards';
                 
                 setTimeout(function() {
                     notification.remove();
                 }, 300);
-            }, 3000);
+            }, 5000);
         }
     }
 })();

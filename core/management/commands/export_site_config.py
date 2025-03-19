@@ -46,6 +46,10 @@ class Command(BaseCommand):
             'google_analytics_id': config.google_analytics_id,
         }
         
+        ai_config = {
+            'anthropic_api_key': config.anthropic_api_key,
+        }
+        
         # Get the CSS block from existing file if it exists
         custom_css = ""
         try:
@@ -108,6 +112,12 @@ Write your about information in markdown format below.
 {analytics}
 ```
 
+## AI Configuration
+
+```yaml
+{ai_config}
+```
+
 ---
 
 ## How to Apply Changes
@@ -128,7 +138,8 @@ This will parse the markdown file and update the database with the new configura
             about=config.about_text,
             contact=yaml.dump(contact, default_flow_style=False),
             social=yaml.dump(social, default_flow_style=False),
-            analytics=yaml.dump(analytics, default_flow_style=False)
+            analytics=yaml.dump(analytics, default_flow_style=False),
+            ai_config=yaml.dump(ai_config, default_flow_style=False)
         )
         
         # Write to file

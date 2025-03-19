@@ -4,7 +4,7 @@ from django.core.management import call_command
 from django.urls import path
 from django.shortcuts import render
 from .models import SiteConfig
-from .admin.views import ai_editor_view, ai_message_view, apply_changes_view
+from .admin.views import ai_editor_view, ai_message_view, ai_config_view, apply_changes_view, test_json_view
 import traceback
 import time
 
@@ -42,7 +42,9 @@ class SiteConfigAdmin(admin.ModelAdmin):
         custom_urls = [
             path('ai_editor/', self.admin_site.admin_view(ai_editor_view), name='ai-config-editor'),
             path('ai_message/', self.admin_site.admin_view(ai_message_view), name='ai-config-message'),
+            path('ai_config/', self.admin_site.admin_view(ai_config_view), name='ai-config-generate'),
             path('apply_changes/', self.admin_site.admin_view(apply_changes_view), name='ai-config-apply'),
+            path('test_json/', test_json_view, name='test-json'),
         ]
         return custom_urls + urls
     
