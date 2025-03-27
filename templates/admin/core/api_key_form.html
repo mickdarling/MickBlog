@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+    &rsaquo; API Key Setup
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>API Key Setup</h1>
+    
+    <div class="module">
+        <p>The Anthropic API key is used for AI-powered configuration editing. For security reasons, the key is not stored in the database but in the environment variables.</p>
+        
+        <h2>Current Status</h2>
+        {% if api_key_set %}
+            <div style="color: green; margin-bottom: 20px;">
+                ✅ API key is currently set ({% if api_key_preview %}{{ api_key_preview }}{% else %}hidden{% endif %})
+            </div>
+        {% else %}
+            <div style="color: red; margin-bottom: 20px;">
+                ❌ API key is not set
+            </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'core:set-api-key' %}">
+            {% csrf_token %}
+            <fieldset class="module aligned">
+                <div class="form-row">
+                    <div class="field-box">
+                        <label for="api_key">Anthropic API Key:</label>
+                        <input type="text" name="api_key" id="api_key" placeholder="Enter your API key" style="width: 500px;">
+                        <p class="help">Enter your Anthropic API key. It will be saved to the .env file and loaded as an environment variable.</p>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <div class="submit-row">
+                <input type="submit" value="Save API Key" class="default">
+                <a href="{% url 'admin:index' %}" class="button" style="float: left;">Cancel</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="module">
+        <h2>Get an API Key</h2>
+        <p>Don't have an API key yet? Visit the <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a> to create one.</p>
+    </div>
+</div>
+{% endblock %}

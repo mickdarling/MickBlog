@@ -1,0 +1,16 @@
+{% extends "admin/app_list.html" %}
+{% load i18n %}
+
+{% block content %}
+{{ block.super }}
+
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
+    <h2 style="margin-top: 0;">Quick Actions</h2>
+    <a href="/admin/api-key-setup/" class="button" style="background-color: #28a745; color: white; margin-right: 10px;">
+        Set API Key
+    </a>
+    <a href="{% url 'admin:ai-config-editor' %}" class="button" style="background-color: #007bff; color: white;">
+        AI Editor
+    </a>
+</div>
+{% endblock %}

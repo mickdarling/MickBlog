@@ -1,0 +1,7 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block userlinks %}
+    {{ block.super }}
+    / <a href="/admin/api-key-setup/">Set API Key</a>
+{% endblock %}
