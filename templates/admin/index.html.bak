@@ -10,7 +10,7 @@
         <li><a href="{% url 'admin:core_siteconfig_change' 1 %}">Edit Site Configuration</a></li>
         <li><a href="{% url 'admin:ai-config-editor' %}">AI Editor</a></li>
         <li>
-            <a href="{% url 'core:api-key-form' %}" style="color: #28a745; font-weight: bold;">
+            <a href="/admin/api-key-setup/" style="color: #28a745; font-weight: bold;">
                 Set Anthropic API Key
             </a>
         </li>
