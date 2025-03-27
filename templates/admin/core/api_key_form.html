@@ -13,19 +13,46 @@
 <div id="content-main">
     <h1>API Key Setup</h1>
     
+    {% if messages %}
+    <ul class="messagelist">
+        {% for message in messages %}
+            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    
     <div class="module">
         <p>The Anthropic API key is used for AI-powered configuration editing. For security reasons, the key is not stored in the database but in the environment variables.</p>
         
         <h2>Current Status</h2>
         {% if api_key_set %}
-            <div style="color: green; margin-bottom: 20px;">
-                ✅ API key is currently set ({% if api_key_preview %}{{ api_key_preview }}{% else %}hidden{% endif %})
+            <div style="color: green; background-color: #f0fff0; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #90ee90;">
+                <div style="font-size: 16px;"><b>✅ API key is currently set</b></div>
+                <div style="margin-top: 5px;">
+                    Current key: <code>{% if api_key_preview %}{{ api_key_preview }}{% else %}[Hidden]{% endif %}</code>
+                </div>
+                <div style="margin-top: 10px; font-size: 14px;">
+                    The API key is stored in your <code>.env</code> file and active in the current session.
+                </div>
             </div>
         {% else %}
-            <div style="color: red; margin-bottom: 20px;">
-                ❌ API key is not set
+            <div style="color: #721c24; background-color: #f8d7da; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+                <div style="font-size: 16px;"><b>❌ API key is not set</b></div>
+                <div style="margin-top: 10px; font-size: 14px;">
+                    You need to add an API key to use the AI-powered configuration editing features.
+                </div>
             </div>
         {% endif %}
+        
+        <div style="background-color: #ffffd0; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #e6e600;">
+            <strong>Important:</strong> Make sure your API key is in the correct format. Anthropic API keys typically:
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li>Start with <code>sk-ant-api</code></li>
+                <li>Are approximately 100 characters long</li>
+                <li>Do not contain any spaces or newlines</li>
+            </ul>
+            <p style="margin-top: 10px;">If you're experiencing "Invalid bearer token" errors, double-check that your key is correct and properly formatted.</p>
+        </div>
         
         <form method="post" action="{% url 'core:set-api-key' %}">
             {% csrf_token %}
@@ -47,8 +74,19 @@
     </div>
     
     <div class="module">
+        <h2>How to Use the API Key</h2>
+        <p>Once your API key is set up:</p>
+        <ol>
+            <li>Go to <a href="{% url 'admin:core_siteconfig_change' 1 %}">Site Configuration</a> in the admin</li>
+            <li>Click the "AI Editor" button in the top-right corner</li>
+            <li>Use natural language to describe changes you want to make to your site</li>
+        </ol>
+    </div>
+    
+    <div class="module">
         <h2>Get an API Key</h2>
         <p>Don't have an API key yet? Visit the <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a> to create one.</p>
+        <p>For local development, Claude Rate limits are generous. For production, consider subscribing to a paid plan.</p>
     </div>
 </div>
 {% endblock %}

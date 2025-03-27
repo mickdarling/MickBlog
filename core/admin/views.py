@@ -3,6 +3,7 @@ Custom admin views for AI-powered site configuration editor.
 """
 import os
 import json
+import re
 import requests
 import traceback
 import reversion
@@ -14,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.core.management import call_command
 from core.models import SiteConfig
+from core.utils import reload_env_settings, get_anthropic_api_key
 
 @staff_member_required
 def ai_editor_view(request):
@@ -25,11 +27,14 @@ def ai_editor_view(request):
     import json
     current_config = json.dumps(config_dict, indent=2)
     
-    # Check if Anthropic API key is configured in settings
-    api_key_configured = bool(settings.ANTHROPIC_API_KEY)
+    # Check if Anthropic API key is configured using our robust method
+    api_key = get_anthropic_api_key()
+    api_key_configured = bool(api_key)
     
     # Debug output
-    print(f"AI Editor View: Settings API key configured: {api_key_configured}")
+    print(f"AI Editor View: API key configured: {api_key_configured}")
+    if api_key_configured:
+        print(f"AI Editor View: API key starts with: {api_key[:5]}")
     
     context = {
         'title': 'AI Site Configuration Editor',
@@ -143,31 +148,32 @@ def mock_ai_config_view(request):
 @require_http_methods(["POST"])
 def ai_config_view(request):
     """
-    Handles generation of configuration changes using the Anthropic Claude API.
+    Combined endpoint that handles both natural language responses and config generation.
     
     This view takes a user request message, combines it with the current site configuration,
-    and sends it to the Anthropic Claude API to generate updated JSON configuration.
+    and sends it to the Anthropic Claude API to generate a combined response with both
+    natural language explanation and JSON configuration.
     
     Endpoint: /ai_config/
     Method: POST
     Request Format:
         {
-            "message": "The user request message (e.g., 'Change the title to Mick Blog')"
+            "message": "The user request message (e.g., 'Change the title to Mick Blog')",
+            "history": Optional array of previous message history
         }
     Response Format:
         {
-            "config": JSON object with updated site configuration
+            "reply": "Natural language response explaining the changes",
+            "config": "JSON configuration string with the changes applied"
         }
     Or for errors:
         {
             "error": "Error message",
-            "status_code": 500,
-            "error_type": "api_error",
             "detail": "Additional error details"
         }
     """
-    # Step 1: Retrieve the API key from settings
-    api_key = settings.ANTHROPIC_API_KEY
+    # Step 1: Get the API key with multiple fallbacks
+    api_key = get_anthropic_api_key()
     
     # Verify API key is available before proceeding
     if not api_key:
@@ -177,18 +183,21 @@ def ai_config_view(request):
         }, status=500)
     
     try:
-        # Step 2: Parse the request body to get the user message
+        # Step 2: Parse the request body to get the user message and optional history
         data = json.loads(request.body)
         user_message = data.get('message', '')
+        message_history = data.get('history', [])
         
         # Get the current site configuration as a dictionary
         config = SiteConfig.get()
         config_dict = config.to_dict()
         current_config = json.dumps(config_dict, indent=2)
         
-        # Step 3: Craft a specialized system prompt for generating configuration changes
-        system_message = f"""You are a configuration assistant for a Django website. 
-Your task is to generate an updated configuration based on the user's request.
+        # Step 3: Craft a specialized system prompt that requests BOTH a natural language response
+        # and a JSON configuration in a structured format
+        system_message = f"""You are a configuration assistant for a Django website.
+Your task is to help users update their site configuration using both natural language and JSON.
+
 The current site configuration is provided as a JSON object:
 
 ```json
@@ -196,231 +205,64 @@ The current site configuration is provided as a JSON object:
 ```
 
 EXTREMELY IMPORTANT INSTRUCTIONS:
-1. Output ONLY the updated JSON configuration with the requested changes applied
-2. Do NOT include any explanations, markdown formatting, or code blocks
-3. Your output must be valid JSON that can be parsed with json.loads()
-4. Maintain the exact same structure as the original configuration
-5. Only modify the specific fields mentioned in the user request
-6. For all other fields, keep their original values
-7. DO NOT remove any fields from the original configuration
-8. DO NOT add any fields that weren't in the original configuration
+1. First, determine if the user's request is asking for a specific configuration change.
+   - If they are asking for a change (e.g., "Change the title to X", "Make the colors more vibrant"), provide BOTH explanation and JSON sections
+   - If they are just saying hello, testing, or asking a question without requesting changes, ONLY provide the explanation section
 
-For example, if the user asks to change the site title, you should return the entire config object 
-with ONLY the title field modified in the site_info section.
-
-Always validate that your response is proper JSON before returning it.
-"""
-
-        # Step 4: Prepare the message array with the user's request
-        api_messages = [
-            {"role": "user", "content": f"Update the site configuration with this change: {user_message}"}
-        ]
-        
-        # Step 5: Set up API request headers
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-            "anthropic-version": "2023-06-01"
-        }
-        
-        # Step 6: Prepare the request body with parameters optimized for configuration generation
-        request_body = {
-            "model": "claude-3-sonnet-20240229",
-            "max_tokens": 4000,
-            "temperature": 0.2,  # Lower temperature for more deterministic output
-            "messages": api_messages,
-            "system": system_message
-        }
-        
-        # Log the request details for debugging
-        print(f"CONFIG GENERATION: Requesting updated config for: {user_message}")
-        
-        # Step 7: Make the API request with comprehensive error handling
-        try:
-            # Log essential request information
-            print(f"CONFIG GENERATION: Sending request to Anthropic API")
-            print(f"CONFIG GENERATION: Using model: {request_body['model']}")
-            print(f"CONFIG GENERATION: User message: {user_message}")
-            
-            # Send the API request
-            response = requests.post(
-                "https://api.anthropic.com/v1/messages",
-                headers=headers,
-                json=request_body,
-                timeout=60
-            )
-            
-            # Log response status immediately
-            print(f"CONFIG GENERATION: Received response with status code: {response.status_code}")
-            
-        except requests.exceptions.RequestException as e:
-            # Handle network-related errors
-            error_detail = str(e)
-            print(f"CONFIG GENERATION: Request exception: {error_detail}")
-            
-            return JsonResponse({
-                'error': f"API connection error: {error_detail}",
-                'detail': "Failed to connect to the Anthropic API. Please check your network connection and try again."
-            }, status=500)
-        
-        # Step 8: Process API response with detailed error handling
-        if response.status_code != 200:
-            # If not a successful response, extract and format error information
-            error_message = "Unknown error"
-            error_type = "api_error"
-            response_text = ""
-            
-            try:
-                # Get the full response text for logging
-                response_text = response.text
-                print(f"CONFIG GENERATION: Full error response: {response_text}")
-                
-                # Try to parse the response as JSON
-                error_data = response.json()
-                print(f"CONFIG GENERATION: JSON error data: {error_data}")
-                
-                # Extract structured error information if available
-                if 'error' in error_data:
-                    if isinstance(error_data['error'], dict):
-                        error_message = error_data['error'].get('message', 'Unknown error')
-                        error_type = error_data['error'].get('type', 'api_error')
-                    else:
-                        error_message = str(error_data['error'])
-                elif 'type' in error_data and 'message' in error_data:
-                    error_message = f"{error_data.get('type')}: {error_data.get('message')}"
-                    error_type = error_data.get('type', 'api_error')
-            except Exception as e:
-                # Catch-all for any error handling issues
-                error_message = f"Failed to parse error response: {str(e)}"
-                print(f"CONFIG GENERATION: Exception while handling error: {str(e)}")
-                
-            print(f"CONFIG GENERATION: API Error: {error_message}")
-            
-            # Return a comprehensive error response with all available information
-            return JsonResponse({
-                'error': f"API Error: {error_message}",
-                'status_code': response.status_code,
-                'error_type': error_type,
-                'detail': "The Anthropic API returned an error. Please check the API key and try again."
-            }, status=500)
-        
-        # Step 9: Extract and process the successful API response
-        response_data = response.json()
-        ai_response = response_data['content'][0]['text']
-        
-        # Clean up the response - remove any markdown formatting if present
-        cleaned_response = ai_response.strip()
-        
-        # If response is wrapped in code blocks, extract the JSON
-        if cleaned_response.startswith("```json") or cleaned_response.startswith("```"):
-            import re
-            matches = re.findall(r'```(?:json)?\s*([\s\S]*?)\s*```', cleaned_response)
-            if matches:
-                cleaned_response = matches[0].strip()
-        
-        # Validate that the response is valid JSON
-        try:
-            # Parse the JSON to ensure it's valid
-            updated_config = json.loads(cleaned_response)
-            
-            # Log successful parsing
-            print(f"CONFIG RESPONSE: Successfully parsed JSON response")
-            
-            # Step 10: Return the validated configuration
-            return JsonResponse({'config': updated_config})
-            
-        except json.JSONDecodeError as e:
-            # If the response isn't valid JSON, return an error
-            print(f"CONFIG RESPONSE: Invalid JSON in response: {e}")
-            return JsonResponse({
-                'error': "Invalid JSON in API response",
-                'detail': f"The API returned a response that could not be parsed as JSON: {str(e)}"
-            }, status=500)
-            
-    except Exception as e:
-        # Catch-all exception handler for any unhandled errors
-        print(f"Error in ai_config_view: {str(e)}")
-        traceback.print_exc()
-        return JsonResponse({
-            'error': f"Error: {str(e)}",
-            'detail': "An unexpected error occurred while processing your request."
-        }, status=500)
-
-@csrf_exempt
-@staff_member_required
-@require_http_methods(["POST"])
-def ai_message_view(request):
-    """
-    Handles API interaction with Claude for conversational responses about site configuration.
-    
-    This view takes a user message (and optionally message history) and sends it to the
-    Anthropic Claude API to get a conversational response about site configuration options.
-    
-    Endpoint: /ai_message/
-    Method: POST
-    Request Format:
-        {
-            "message": "User's question or request",
-            "history": [
-                {"role": "user", "content": "Previous user message"},
-                {"role": "assistant", "content": "Previous assistant response"}
-            ]
-        }
-    Response Format:
-        {
-            "reply": "Assistant's conversational response"
-        }
-    Or for errors:
-        {
-            "error": "Error message",
-            "detail": "Additional error details"  // Optional
-        }
-    """
-    # Step 1: Retrieve and validate the API key
-    api_key = settings.ANTHROPIC_API_KEY
-    
-    # Log API key availability for debugging
-    print(f"AI Message View: API key available: {bool(api_key)}")
-    
-    # Verify API key is available
-    if not api_key:
-        return JsonResponse({
-            'error': 'Anthropic API key not configured',
-            'detail': 'Please add ANTHROPIC_API_KEY to your environment variables.'
-        }, status=500)
-    
-    try:
-        # Step 2: Parse the request body and extract parameters
-        data = json.loads(request.body)
-        user_message = data.get('message', '')
-        message_history = data.get('history', [])
-        
-        # Get the current site configuration for reference
-        config = SiteConfig.get()
-        config_dict = config.to_dict()
-        current_config = json.dumps(config_dict, indent=2)
-        
-        # Step 3: Create the system message for conversational responses
-        system_message = f"""You are a Django site configuration assistant. 
-You help users configure their Django-based personal website.
-The current site configuration is shown below (for your reference only):
-
-```json
-{current_config}
+2. For requests that DO need configuration changes, format your response like this:
+```explanation
+Your natural language explanation here, speaking directly to the user. Be concise but helpful.
 ```
 
-IMPORTANT INSTRUCTIONS:
-1. You are helping the user make changes to their site configuration
-2. Be specific about what fields the user can change and what values are valid
-3. Keep your responses conversational, helpful, and to the point
-4. Explain where changes would be visible on the site
-5. Do NOT include the complete configuration in your responses
-6. If the user asks to make specific changes, tell them what fields would be updated
+```json
+{{
+  "site_info": {{
+    "title": "Example Title",
+    ...
+  }},
+  ...
+}}
+```
 
-Example response:
-"I'd update the site title from 'Mick's Blog' to 'VibeBlog'. This change would appear in the browser title bar and anywhere the site title is displayed."
+3. For requests that do NOT need configuration changes, ONLY include the explanation:
+```explanation
+Your response explaining that no changes are needed, or answering their question, or greeting them back.
+```
+
+4. For the JSON section (when needed):
+   - Include the ENTIRE configuration object, with all fields
+   - Only modify the specific fields mentioned in the user's request
+   - Maintain the exact same structure as the original configuration
+   - Ensure the JSON is valid and properly formatted
+
+5. For the explanation section:
+   - Be concise but friendly and helpful
+   - For change requests, explain what you're changing and why
+   - Mention where the changes will be visible on the site
+   - Keep this section under 150 words
+
+Example responses:
+
+For a change request:
+```explanation
+I've updated the site title to "Ethereal Visions" to give it a more dreamy, otherworldly feel. This change will be visible in the browser tab, the site header, and anywhere else the title is displayed. I've kept the rest of your site configuration unchanged.
+```
+
+```json
+{{
+  "site_info": {{
+    "title": "Ethereal Visions",
+    ...rest of unchanged config...
+  }}
+}}
+```
+
+For a non-change request like "Hello" or "Test":
+```explanation
+Hello! I'm here to help you update your site configuration. If you'd like to make changes to your site, you can ask me to modify specific elements like the title, colors, tagline, or other aspects of your site. Just let me know what you'd like to change.
+```
 """
-        
+
         # Step 4: Prepare the message array with conversation history
         api_messages = []
         
@@ -439,30 +281,44 @@ Example response:
         api_messages.append({"role": "user", "content": user_message})
         
         # Step 5: Set up API request headers
+        # Make sure there are no trailing whitespaces or quotes in the API key
+        clean_api_key = api_key.strip().strip('"\'')
+        
+        # Current documentation recommends using both Authorization and x-api-key headers
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-            "anthropic-version": "2023-06-01"
+            "Authorization": f"Bearer {clean_api_key}",
+            "anthropic-version": "2023-06-01",
+            "x-api-key": clean_api_key  # Add this for compatibility with different API versions
         }
         
-        # Step 6: Prepare request body
+        # Debug information about headers
+        print(f"COMBINED_AI: Authorization header length: {len(f'Bearer {clean_api_key}')}")
+        print(f"COMBINED_AI: Header starts with: Bearer {clean_api_key[:7]}...")
+        
+        # Step 6: Prepare the request body with parameters optimized for configuration generation
         request_body = {
             "model": "claude-3-sonnet-20240229",
             "max_tokens": 4000,
-            "temperature": 0.7,  # Higher temperature for more creative conversation
+            "temperature": 0.2,  # Lower temperature for more deterministic output
             "messages": api_messages,
             "system": system_message
         }
         
-        # Log request info
-        print(f"AI_MESSAGE: Sending request to Anthropic API")
-        print(f"AI_MESSAGE: Using model: {request_body['model']}")
-        print(f"AI_MESSAGE: Message history length: {len(message_history)}")
-        print(f"AI_MESSAGE: Current user message: {user_message}")
+        # Log the request details for debugging
+        print(f"COMBINED_AI: Processing request: {user_message}")
         
-        # Step 7: Make the API request with error handling
+        # Step 7: Make the API request with comprehensive error handling
         try:
-            # Send the API request
+            # Log essential request information
+            print(f"COMBINED_AI: Sending request to Anthropic API")
+            print(f"COMBINED_AI: Using model: {request_body['model']}")
+            print(f"COMBINED_AI: User message: {user_message}")
+            
+            # Log the API key being used (first 5 chars only for security)
+            print(f"COMBINED_AI: Using API key starting with: {api_key[:5]}")
+            
+            # Send the API request to the most current endpoint
             response = requests.post(
                 "https://api.anthropic.com/v1/messages",
                 headers=headers,
@@ -470,71 +326,130 @@ Example response:
                 timeout=60
             )
             
-            # Log response status
-            print(f"AI_MESSAGE: Received response with status code: {response.status_code}")
+            # Log response status immediately
+            print(f"COMBINED_AI: Received response with status code: {response.status_code}")
+            
+            # Log the response text if there's an error
+            if response.status_code != 200:
+                print(f"COMBINED_AI: Error response: {response.text[:200]}...")
             
         except requests.exceptions.RequestException as e:
             # Handle network-related errors
             error_detail = str(e)
-            print(f"AI_MESSAGE: Request exception: {error_detail}")
+            print(f"COMBINED_AI: Request exception: {error_detail}")
             
             return JsonResponse({
                 'error': f"API connection error: {error_detail}",
-                'detail': "Failed to connect to the Anthropic API. Please check your network connection."
+                'detail': "Failed to connect to the Anthropic API. Please check your network connection and try again."
             }, status=500)
         
-        # Step 8: Handle non-successful API responses
+        # Step 8: Process API response with detailed error handling
         if response.status_code != 200:
+            # If not a successful response, extract and format error information
             error_message = "Unknown error"
+            error_type = "api_error"
             
             try:
-                # Try to extract error details from the response
+                # Get the full response text for logging
                 response_text = response.text
+                print(f"COMBINED_AI: Full error response: {response_text}")
+                
+                # Try to parse the response as JSON
                 error_data = response.json()
+                print(f"COMBINED_AI: JSON error data: {error_data}")
                 
                 # Extract structured error information if available
                 if 'error' in error_data:
                     if isinstance(error_data['error'], dict):
                         error_message = error_data['error'].get('message', 'Unknown error')
+                        error_type = error_data['error'].get('type', 'api_error')
                     else:
                         error_message = str(error_data['error'])
+                elif 'type' in error_data and 'message' in error_data:
+                    error_message = f"{error_data.get('type')}: {error_data.get('message')}"
+                    error_type = error_data.get('type', 'api_error')
             except Exception as e:
-                error_message = f"Error parsing API response: {str(e)}"
+                # Catch-all for any error handling issues
+                error_message = f"Failed to parse error response: {str(e)}"
+                print(f"COMBINED_AI: Exception while handling error: {str(e)}")
                 
-            print(f"AI_MESSAGE: API Error: {error_message}")
+            print(f"COMBINED_AI: API Error: {error_message}")
             
+            # Return a comprehensive error response with all available information
             return JsonResponse({
                 'error': f"API Error: {error_message}",
-                'detail': "The Anthropic API returned an error."
+                'status_code': response.status_code,
+                'error_type': error_type,
+                'detail': "The Anthropic API returned an error. Please check the API key and try again."
             }, status=500)
         
-        # Step 9: Process the successful API response
-        try:
-            response_data = response.json()
-            ai_response = response_data['content'][0]['text']
+        # Step 9: Extract and process the successful API response
+        response_data = response.json()
+        ai_response = response_data['content'][0]['text']
+        print(f"COMBINED_AI: Raw response: {ai_response[:100]}...")
+        
+        # Step 10: Parse the structured response to extract explanation and configuration
+        explanation = ""
+        config_json = ""
+        
+        # Use regex to extract the explanation section
+        explanation_match = re.search(r'```explanation\s*([\s\S]*?)\s*```', ai_response)
+        if explanation_match:
+            explanation = explanation_match.group(1).strip()
+            print(f"COMBINED_AI: Extracted explanation: {explanation[:50]}...")
+        else:
+            print(f"COMBINED_AI: No explanation section found, using full response as explanation")
+            explanation = ai_response
+        
+        # Use regex to extract the JSON section
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', ai_response)
+        if json_match:
+            config_json = json_match.group(1).strip()
+            print(f"COMBINED_AI: Extracted JSON: {config_json[:50]}...")
+        else:
+            print(f"COMBINED_AI: No JSON section found - possibly no changes needed")
             
-            # For conversation mode, just return the AI's reply directly
+            # For cases where the AI doesn't understand what to change or no changes are needed,
+            # return only the explanation without a 500 error
             return JsonResponse({
-                'reply': ai_response
+                'reply': explanation,
+                'config': None,  # No config changes
+                'no_changes': True  # Flag to indicate no changes were made
             })
-                
-        except Exception as e:
-            # Handle any errors while processing the API response
-            print(f"Error processing response: {e}")
-            traceback.print_exc()
+        
+        # Step 11: Validate the extracted JSON
+        try:
+            # Parse the JSON to ensure it's valid
+            parsed_config = json.loads(config_json)
+            
+            # For debugging, validate the configuration has the required structure
+            # Every config should have a site_info section
+            if not isinstance(parsed_config, dict) or 'site_info' not in parsed_config:
+                print(f"COMBINED_AI: Warning - JSON response missing site_info section")
+            
+            # Return both the explanation and configuration
             return JsonResponse({
-                'error': f"Error processing response: {str(e)}",
-                'detail': "The API returned a successful response, but there was an error processing it."
+                'reply': explanation,
+                'config': config_json
+            })
+            
+        except json.JSONDecodeError as e:
+            # If the response isn't valid JSON, return an error
+            print(f"COMBINED_AI: Invalid JSON in response: {e}")
+            return JsonResponse({
+                'error': "Invalid JSON in API response",
+                'detail': f"The API returned a response with invalid JSON: {str(e)}"
             }, status=500)
             
     except Exception as e:
-        # Catch-all exception handler
-        print(f"Error in ai_message_view: {str(e)}")
+        # Catch-all exception handler for any unhandled errors
+        print(f"Error in ai_config_view: {str(e)}")
         traceback.print_exc()
         return JsonResponse({
             'error': f"Error: {str(e)}",
             'detail': "An unexpected error occurred while processing your request."
         }, status=500)
+
 
 @csrf_exempt
 @staff_member_required

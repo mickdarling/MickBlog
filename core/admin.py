@@ -18,8 +18,8 @@ class ApiKeyAdminForm(forms.ModelForm):
     anthropic_api_key = forms.CharField(
         required=False,
         label="Anthropic API Key",
-        widget=forms.PasswordInput(attrs={'placeholder': 'Enter API key'}),
-        help_text="Enter your Anthropic API key here. It will be saved to the .env file."
+        widget=forms.TextInput(attrs={'placeholder': 'Enter your API key here', 'size': 50}),
+        help_text="Enter your Anthropic API key here. It will be saved to the .env file and never stored in the database."
     )
     
     class Meta:
@@ -50,18 +50,17 @@ class SiteConfigAdmin(VersionAdmin):
         ('Contact Information', {
             'fields': ('email', 'phone', 'address')
         }),
+        ('AI Configuration', {
+            'fields': ('anthropic_api_key',),
+            'description': 'API key is stored in environment variables for security. You can set it here to update the .env file.'
+        }),
         ('Advanced Settings', {
             'fields': ('google_analytics_id', 'maintenance_mode'),
             'classes': ('collapse',)
         }),
-        ('AI Configuration', {
-            'fields': ('_anthropic_api_key_display', 'anthropic_api_key'),
-            'classes': ('collapse',),
-            'description': 'API key is stored in environment variables for security. You can set it here to update the .env file.'
-        }),
     )
     
-    readonly_fields = ('updated_at', '_anthropic_api_key_display')
+    readonly_fields = ('updated_at',)
     
     def get_urls(self):
         """Add custom URLs for the AI editor interface"""

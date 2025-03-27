@@ -18,5 +18,5 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     command: >
       bash -c "python manage.py migrate &&
-               python manage.py update_site_config &&
+               python manage.py migrate_config_from_file || echo 'Already migrated' &&
                python manage.py runserver 0.0.0.0:8000"

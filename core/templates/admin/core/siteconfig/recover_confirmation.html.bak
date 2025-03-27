@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_changelist' %}">Site configurations</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_change' config.pk %}">{{ config }}</a>
+    &rsaquo; <a href="{% url 'admin:config-history' %}">History</a>
+    &rsaquo; Recover version
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Recover Version from {{ version.revision.date_created|date:"DATETIME_FORMAT" }}</h1>
+    
+    <div class="module">
+        <p>Are you sure you want to recover this version of the site configuration?</p>
+        <p>This will revert the current configuration to this version.</p>
+        
+        <h3>Version Information</h3>
+        <p><strong>Date:</strong> {{ version.revision.date_created }}</p>
+        <p><strong>User:</strong> {% if version.revision.user %}{{ version.revision.user.get_username }}{% else %}<em>Unknown</em>{% endif %}</p>
+        <p><strong>Comment:</strong> {% if version.revision.comment %}{{ version.revision.comment }}{% else %}<em>No comment</em>{% endif %}</p>
+        
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border: 1px solid #ccc; border-radius: 4px;">
+            <h4>Configuration Details</h4>
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 30%; text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Field</th>
+                        <th style="width: 70%; text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field, value in data.items %}
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ field }}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                            {% if field == 'about_text' or field == 'custom_css' %}
+                                <pre style="max-height: 150px; overflow-y: auto; background-color: #f5f5f5; padding: 10px; border-radius: 4px; margin: 0;">{{ value|truncatechars:500 }}</pre>
+                            {% else %}
+                                {{ value|default:"<em>None</em>" }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="submit-row">
+            <input type="submit" value="Yes, recover this version" class="default" />
+            <a href="{% url 'admin:config-history' %}" class="button" style="float: left;">No, go back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

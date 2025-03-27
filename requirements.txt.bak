@@ -7,6 +7,7 @@ django-extensions==3.2.3
 django-markdownx==4.0.7
 django-markdown-deux==1.0.6
 django-sslserver==0.22
+django-reversion==5.1.0
 
 # Database
 psycopg2-binary==2.9.9

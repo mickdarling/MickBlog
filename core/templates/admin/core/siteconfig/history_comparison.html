@@ -8,77 +8,124 @@
     &rsaquo; <a href="{% url 'admin:core_siteconfig_changelist' %}">Site configurations</a>
     &rsaquo; <a href="{% url 'admin:core_siteconfig_change' config.pk %}">{{ config }}</a>
     &rsaquo; <a href="{% url 'admin:config-history' %}">History</a>
-    &rsaquo; Compare Versions
+    &rsaquo; Version Details
 </div>
 {% endblock %}
 
 {% block content %}
 <div id="content-main">
-    <h1>Compare Versions</h1>
+    <h1>{{ title }}</h1>
     
     <div class="module">
-        <h2>Version Details</h2>
-        <table>
-            <tr>
-                <th>From Version</th>
-                <td>{{ version_a.revision.date_created|date:"DATETIME_FORMAT" }}</td>
-                <td>
-                    {% if version_a.revision.user %}
-                        {{ version_a.revision.user.get_username }}
-                    {% else %}
-                        &mdash;
-                    {% endif %}
-                </td>
-                <td>{{ version_a.revision.comment|default:"&mdash;" }}</td>
-            </tr>
-            <tr>
-                <th>To Version</th>
-                <td>{{ version_b.revision.date_created|date:"DATETIME_FORMAT" }}</td>
-                <td>
-                    {% if version_b.revision.user %}
-                        {{ version_b.revision.user.get_username }}
-                    {% else %}
-                        &mdash;
-                    {% endif %}
-                </td>
-                <td>{{ version_b.revision.comment|default:"&mdash;" }}</td>
-            </tr>
-        </table>
+        <h2>Version Information</h2>
+        <div style="padding: 10px 15px; background-color: #f5f5f5; border-radius: 4px; margin-bottom: 20px;">
+            <p><strong>Date:</strong> {{ version.revision.date_created|date:"F j, Y, P" }}</p>
+            <p><strong>User:</strong> {% if version.revision.user %}{{ version.revision.user.get_username }}{% else %}&mdash;{% endif %}</p>
+            <p><strong>Comment:</strong> {% if version.revision.comment %}{{ version.revision.comment }}{% else %}&mdash;{% endif %}</p>
+        </div>
     </div>
     
     <div class="module">
-        <h2>Changes</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Field</th>
-                    <th>From</th>
-                    <th>To</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for field, values in changes.items %}
-                <tr>
-                    <td>{{ field }}</td>
-                    <td>{{ values.0|linebreaksbr }}</td>
-                    <td>{{ values.1|linebreaksbr }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" style="text-align: center;">No changes found between these versions.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2>Version Comparison</h2>
+        <p>This shows differences between this version and the current configuration.</p>
+        
+        {% if changes %}
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd; width: 20%;">Field</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd; width: 40%;">Current Value</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd; width: 40%;">Version Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field, values in changes.items %}
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; font-weight: bold;">{{ field }}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; background-color: #fff0f0;">
+                                {% if field == 'about_text' or field == 'custom_css' %}
+                                    <pre style="white-space: pre-wrap; font-family: monospace; margin: 0; max-height: 200px; overflow-y: auto; background-color: #f8f8f8; padding: 8px; border-radius: 3px;">{{ values.0 }}</pre>
+                                {% else %}
+                                    {{ values.0|default:"<em>Empty</em>"|linebreaksbr }}
+                                {% endif %}
+                            </td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; background-color: #f0fff0;">
+                                {% if field == 'about_text' or field == 'custom_css' %}
+                                    <pre style="white-space: pre-wrap; font-family: monospace; margin: 0; max-height: 200px; overflow-y: auto; background-color: #f8f8f8; padding: 8px; border-radius: 3px;">{{ values.1 }}</pre>
+                                {% else %}
+                                    {{ values.1|default:"<em>Empty</em>"|linebreaksbr }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 20px; text-align: center; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0;">
+                <p>No differences found between this version and the current configuration.</p>
+            </div>
+        {% endif %}
     </div>
     
-    <div class="submit-row">
-        <a href="{% url 'admin:config-history' %}" class="button">Back to History</a>
+    <div class="module">
+        <h2>All Fields in This Version</h2>
+        <p>Complete snapshot of all field values in this version:</p>
+        
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-top: 15px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f2f2f2; position: sticky; top: 0;">
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd; width: 25%;">Field</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd; width: 75%;">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field, value in data.items %}
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">{{ field }}</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                                {% if field == 'about_text' or field == 'custom_css' %}
+                                    <pre style="white-space: pre-wrap; font-family: monospace; margin: 0; max-height: 150px; overflow-y: auto; background-color: #f8f8f8; padding: 8px; border-radius: 3px;">{{ value }}</pre>
+                                {% else %}
+                                    {{ value|default:"<em>Empty</em>"|linebreaksbr }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="submit-row" style="margin-top: 20px;">
+        <a href="{% url 'admin:config-history' %}" class="button" style="float: left;">Back to History</a>
+        
         {% if can_revert %}
-            <a href="{% url 'admin:core_siteconfig_recover' version_b.pk %}" class="button deletelink" style="float: right;">
+            <a href="{% url 'admin:core_siteconfig_recover' version.pk %}" class="button default" style="float: right;">
                 Revert to This Version
             </a>
         {% endif %}
     </div>
 </div>
+
+<style>
+    /* Additional styling for the page */
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .module h2 {
+        background: #79aec8;
+        color: white;
+        padding: 8px 10px;
+    }
+    
+    .module {
+        margin-bottom: 20px;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+</style>
 {% endblock %}

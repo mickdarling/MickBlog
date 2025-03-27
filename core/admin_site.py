@@ -7,9 +7,10 @@ appears in the admin interface even if there's an issue with the decorator-based
 
 from django.contrib import admin
 from django.urls import path
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.core.exceptions import PermissionDenied
 from .models import SiteConfig
-from .admin.views import ai_editor_view, ai_message_view, ai_config_view, apply_changes_view, test_json_view
+from .admin.views import ai_editor_view, ai_config_view, apply_changes_view, test_json_view
 import reversion
 from reversion.admin import VersionAdmin
 import traceback
@@ -47,17 +48,123 @@ class SiteConfigAdmin(VersionAdmin):
     readonly_fields = ('updated_at',)
     
     def get_urls(self):
-        """Add custom URLs for the AI editor interface"""
+        """Add custom URLs for the AI editor interface and version history"""
         urls = super().get_urls()
         custom_urls = [
             path('ai_editor/', self.admin_site.admin_view(ai_editor_view), name='ai-config-editor'),
-            path('ai_message/', self.admin_site.admin_view(ai_message_view), name='ai-config-message'),
             path('ai_config/', self.admin_site.admin_view(ai_config_view), name='ai-config-generate'),
             path('apply_changes/', self.admin_site.admin_view(apply_changes_view), name='ai-config-apply'),
             path('test_json/', test_json_view, name='test-json'),
             path('config-history/', self.admin_site.admin_view(self.config_history_view), name='config-history'),
+            # Add revision history URLs
+            path('<path:object_id>/history/', self.admin_site.admin_view(self.history_view), name='core_siteconfig_history'),
+            path('<path:object_id>/history/<int:version_id>/', self.admin_site.admin_view(self.revision_view), name='core_siteconfig_revision'),
+            path('recover/<int:version_id>/', self.admin_site.admin_view(self.recover_view), name='core_siteconfig_recover'),
         ]
         return custom_urls + urls
+        
+    def history_view(self, request, object_id):
+        """Custom history view that overrides the default django-reversion history view"""
+        config = SiteConfig.get()
+        history = reversion.models.Version.objects.get_for_object(config)
+        
+        context = {
+            'history': history,
+            'config': config,
+            'title': 'Configuration History',
+        }
+        
+        return render(request, 'admin/core/siteconfig/history.html', context)
+        
+    def revision_view(self, request, object_id, version_id):
+        """View to show a specific revision"""
+        from reversion.models import Version
+        
+        config = SiteConfig.get()
+        version = Version.objects.get(pk=version_id)
+        
+        # Get the old data
+        version_data = version.field_dict
+        
+        # Get the current data
+        current_data = {}
+        for field_name, value in version_data.items():
+            if hasattr(config, field_name):
+                current_data[field_name] = getattr(config, field_name)
+        
+        # Compare the two versions to find changes
+        changes = {}
+        for field, old_value in version_data.items():
+            if field in current_data:
+                new_value = current_data[field]
+                # Only include fields that have changed
+                if old_value != new_value:
+                    # For large text fields, show a preview
+                    if isinstance(old_value, str) and len(old_value) > 200:
+                        old_value = f"{old_value[:200]}..."
+                    if isinstance(new_value, str) and len(new_value) > 200:
+                        new_value = f"{new_value[:200]}..."
+                    changes[field] = (new_value, old_value)  # Note: current first, version second
+        
+        context = {
+            'title': f'Version {version_id} of {config}',
+            'config': config,
+            'version': version,
+            'data': version_data,
+            'current_data': current_data,
+            'changes': changes,
+            'can_revert': True,
+        }
+        
+        return render(request, 'admin/core/siteconfig/history_comparison.html', context)
+        
+    def recover_view(self, request, version_id):
+        """View to recover a specific version"""
+        from reversion.models import Version
+        import reversion
+        
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+            
+        version = Version.objects.get(pk=version_id)
+        
+        if request.method == 'POST':
+            # Actually restore the content
+            with reversion.create_revision():
+                # Get the current SiteConfig instance
+                config = SiteConfig.get()
+                
+                # Get the serialized data from the version
+                version_data = version.field_dict
+                
+                # Update all fields from the version data
+                for field_name, value in version_data.items():
+                    if hasattr(config, field_name):
+                        setattr(config, field_name, value)
+                
+                # Save the config to apply changes
+                config.save()
+                
+                # Set revision metadata
+                reversion.set_user(request.user)
+                reversion.set_comment(f"Reverted to version from {version.revision.date_created}")
+                
+                # Add success message
+                messages.success(request, f"Successfully reverted to version from {version.revision.date_created}")
+                
+                # Redirect to the config change form
+                return redirect('admin:core_siteconfig_change', 1)
+        else:
+            # Display confirmation page
+            context = {
+                'title': f'Recover {version_id}',
+                'version': version,
+                'config': SiteConfig.get(),
+                'data': version.field_dict,
+                'opts': self.model._meta,
+            }
+            
+            return render(request, 'admin/core/siteconfig/recover_confirmation.html', context)
     
     def config_history_view(self, request):
         """View to display configuration history and allow comparing versions"""

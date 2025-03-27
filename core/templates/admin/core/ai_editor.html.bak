@@ -193,8 +193,20 @@
   </script>
   
   {% if not api_key_configured %}
-    <div class="errornote">
-      <p>Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your environment variables or set it in the Site Configuration admin interface.</p>
+    <div class="errornote" style="padding: 20px; margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">API Key Not Configured</h3>
+      <p>The Anthropic API key is required for AI-powered site configuration editing.</p>
+      <p>To set up your API key:</p>
+      <ol style="margin-left: 20px;">
+        <li>Go to the <a href="/admin/api-key-setup/" style="color: #fff; text-decoration: underline;">API Key Setup page</a></li>
+        <li>Enter your Anthropic API key in the form</li>
+        <li>Save the key to enable AI-powered editing</li>
+      </ol>
+      <div style="margin-top: 15px;">
+        <a href="/admin/api-key-setup/" class="button" style="background-color: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block;">
+          Configure API Key
+        </a>
+      </div>
     </div>
   {% else %}
   

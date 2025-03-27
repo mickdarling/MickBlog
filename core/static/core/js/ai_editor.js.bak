@@ -59,8 +59,8 @@
                     return;
                 }
                 
-                // Call the dedicated config endpoint
-                generateConfig(userInput.value.trim());
+                // Call the combined AI/config endpoint
+                processAiRequest(userInput.value.trim());
             });
         }
         
@@ -156,102 +156,33 @@
             return cookieValue || '';
         }
         
-        // Function to directly generate config
-        function generateConfig(message) {
+        // Function to process AI request (combines chat and config)
+        function processAiRequest(message, isUserMessage = true) {
             // Show loading spinner
             if (loadingSpinner) {
                 loadingSpinner.style.display = 'flex';
             }
             
-            console.log('Generating config for:', message);
+            // If this is a user message, add it to the chat
+            if (isUserMessage && chatMessages) {
+                addMessage(message, 'user');
+                
+                // Add to message history
+                messageHistory.push({
+                    role: 'user',
+                    content: message
+                });
+                
+                // Clear input field
+                if (userInput) {
+                    userInput.value = '';
+                }
+            }
             
-            // Call the dedicated config endpoint with new path
+            console.log('Processing AI request:', message);
+            
+            // Call the single combined endpoint
             fetch('/ai_config/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    message: message
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Config API returned status ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(response => {
-                console.log('Config response received:', response);
-                
-                // Hide loading spinner
-                if (loadingSpinner) {
-                    loadingSpinner.style.display = 'none';
-                }
-                
-                if (response.error) {
-                    const errorMessage = response.detail ? `${response.error}\n${response.detail}` : response.error;
-                    console.error("Config API Error:", response);
-                    throw new Error(errorMessage);
-                }
-                
-                // Update config if available
-                if (response.config && configEditor) {
-                    console.log('Config response content: ' + response.config.substring(0, 30) + '...');
-                    
-                    // Set the config content
-                    configEditor.value = response.config;
-                    
-                    // Add system message
-                    addMessage('Configuration changes have been updated in the editor. Review and click "Apply Changes" to save them.', 'system');
-                } else {
-                    console.log('No config received from API');
-                }
-            })
-            .catch(error => {
-                console.error('Error generating config:', error);
-                
-                // Hide loading spinner
-                if (loadingSpinner) {
-                    loadingSpinner.style.display = 'none';
-                }
-                
-                // Show error
-                addMessage('Error generating configuration: ' + error.message, 'system');
-            });
-        }
-        
-        // Function to send message to AI
-        function sendMessage() {
-            if (!userInput || !chatMessages) return;
-            
-            const message = userInput.value.trim();
-            
-            if (!message) {
-                return;
-            }
-            
-            // Add user message to chat
-            addMessage(message, 'user');
-            
-            // Clear input
-            userInput.value = '';
-            
-            // Show loading spinner
-            if (loadingSpinner) {
-                loadingSpinner.style.display = 'flex';
-            }
-            
-            // Add to message history
-            messageHistory.push({
-                role: 'user',
-                content: message
-            });
-            
-            // Step 1: First make the conversation request
-            console.log("Making CONVERSATION API call");
-            fetch('/ai_message/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -269,72 +200,54 @@
                 return response.json();
             })
             .then(response => {
+                console.log('Combined response received:', response);
+                
+                // Hide loading spinner
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
+                
+                // Check for error
                 if (response.error) {
                     const errorMessage = response.detail ? `${response.error}\n${response.detail}` : response.error;
                     console.error("API Error:", response);
                     throw new Error(errorMessage);
                 }
                 
-                // Add AI response to chat
-                addMessage(response.reply, 'assistant');
-                
-                // Add to message history
-                messageHistory.push({
-                    role: 'assistant',
-                    content: response.reply
-                });
-                
-                // Scroll to bottom of chat
-                if (chatMessages) {
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-                
-                // Step 2: Make a separate request to the config endpoint
-                console.log("Making CONFIG API call to dedicated endpoint");
-                
-                return fetch('/ai_config/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify({
-                        message: message  // Just send the original user message
-                    })
-                });
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Config API returned status ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(configResponse => {
-                // Log the config response
-                console.log("CONFIG RESPONSE:", configResponse);
-                
-                // Return the response to continue the chain
-                return configResponse;
-            })
-            .then(response => {
-                // Hide loading spinner
-                if (loadingSpinner) {
-                    loadingSpinner.style.display = 'none';
-                }
-                
-                // Update config if available
-                if (response.config && configEditor) {
-                    console.log("Received configuration from dedicated API call");
+                // Handle the natural language response
+                if (response.reply) {
+                    // Add AI response to chat
+                    addMessage(response.reply, 'assistant');
                     
+                    // Add to message history
+                    messageHistory.push({
+                        role: 'assistant',
+                        content: response.reply
+                    });
+                    
+                    // Scroll to bottom of chat
+                    if (chatMessages) {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                }
+                
+                // Handle the configuration response
+                if (response.config && configEditor && !response.no_changes) {
                     // Log the first 100 chars of the config for debugging
                     console.log(`Config content (first 100 chars): "${response.config.substring(0, 100)}..."`);
                     
                     // Add the configuration to the editor
                     configEditor.value = response.config;
                     
-                    // Add system message about configuration
-                    addMessage('Configuration changes have been updated in the editor. Review and click "Apply Changes" to save them.', 'system');
-                } else {
+                    // Only add system message if not added by natural language response
+                    if (!response.reply) {
+                        addMessage('Configuration changes have been updated in the editor. Review and click "Apply Changes" to save them.', 'system');
+                    }
+                } else if (response.no_changes) {
+                    // This is a case where the AI understood the request but determined no changes were needed
+                    console.log("No changes needed for this request");
+                    // No need to add a system message as the AI response should explain this
+                } else if (!response.config) {
                     console.log("No config received from API");
                     addMessage('No configuration changes were generated for this request', 'system');
                 }
@@ -352,6 +265,20 @@
             });
         }
         
+        // Function to send message via the combined endpoint
+        function sendMessage() {
+            if (!userInput || !chatMessages) return;
+            
+            const message = userInput.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            // Process the request using the combined endpoint
+            processAiRequest(message);
+        }
+        
         // Function to add message to chat
         function addMessage(content, role) {
             if (!chatMessages) return;
@@ -359,44 +286,6 @@
             // Create message element
             const messageElement = document.createElement('div');
             messageElement.className = 'message ' + role;
-            
-            // Handle AI assistant messages specifically to extract configs and clean up display
-            if (role === 'assistant') {
-                console.log("Processing assistant message for markdown blocks");
-                // Check for markdown blocks in assistant messages
-                if (content.includes('```markdown')) {
-                    let cleanedContent = content;
-                    let markdownBlock = null;
-                    
-                    console.log("Found markdown block indicator in message");
-                    
-                    // Use regex to more reliably extract the markdown block
-                    const markdownRegex = /```markdown\s*([\s\S]*?)\s*```/;
-                    const match = content.match(markdownRegex);
-                    
-                    if (match && match[1]) {
-                        markdownBlock = match[1].trim();
-                        console.log("Extracted markdown block using regex:", markdownBlock.substring(0, 50) + "...");
-                        
-                        // Clean up the display text by replacing the large code block with a notice
-                        cleanedContent = content.replace(markdownRegex, 
-                            '<em>[Configuration changes available in the editor]</em>');
-                        
-                        console.log("Cleaned content for display:", cleanedContent.substring(0, 100) + "...");
-                        
-                        // Update the config editor if we found a valid block
-                        if (markdownBlock && configEditor) {
-                            console.log("Updating editor with extracted markdown");
-                            configEditor.value = markdownBlock;
-                        }
-                    } else {
-                        console.log("Failed to extract markdown block with regex");
-                    }
-                    
-                    // Use the cleaned content for display
-                    content = cleanedContent;
-                }
-            }
             
             // Process markdown-like formatting for chat display
             let formattedContent = content

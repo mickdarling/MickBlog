@@ -1,0 +1,21 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+{{ block.super }}
+
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
+    <h2 style="margin-top: 0;">Quick Links</h2>
+    <ul>
+        <li><a href="{% url 'admin:core_siteconfig_change' 1 %}">Edit Site Configuration</a></li>
+        <li><a href="{% url 'admin:ai-config-editor' %}">AI Editor</a></li>
+        <li>
+            <a href="{% url 'core:api-key-form' %}" style="color: #28a745; font-weight: bold;">
+                Set Anthropic API Key
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- No need for the floating form since we have a dedicated page -->
+{% endblock %}
