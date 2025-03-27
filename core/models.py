@@ -55,6 +55,36 @@ class SiteConfig(models.Model):
     # Updated timestamp
     updated_at = models.DateTimeField(auto_now=True, help_text="When this configuration was last updated")
     
+    @property
+    def _anthropic_api_key_display(self):
+        """
+        Display the API key status in the admin interface.
+        This is a read-only field that shows if the API key is configured.
+        """
+        from django.conf import settings
+        from django.utils.html import format_html
+        
+        api_key = settings.ANTHROPIC_API_KEY
+        
+        if api_key:
+            # Mask the key for display
+            if len(api_key) > 10:
+                display_key = f"{api_key[:5]}...{api_key[-5:]}"
+            else:
+                display_key = "[Set in environment]"
+            
+            return format_html(
+                '<span style="color: green;">✅ API key is configured</span><br>'
+                '<small>Current key: {}</small><br>'
+                '<small>To change, update the ANTHROPIC_API_KEY in your environment or .env file.</small>',
+                display_key
+            )
+        else:
+            return format_html(
+                '<span style="color: red;">❌ API key is not configured</span><br>'
+                '<small>Add ANTHROPIC_API_KEY to your environment variables or .env file.</small>'
+            )
+    
     class Meta:
         verbose_name = "Site Configuration"
         verbose_name_plural = "Site Configuration"

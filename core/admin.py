@@ -11,8 +11,68 @@ import time
 import os
 from django.conf import settings
 
+from django import forms
+
+class ApiKeyForm(forms.ModelForm):
+    """Custom form for SiteConfig with temporary API key field"""
+    api_key = forms.CharField(
+        required=False, 
+        widget=forms.PasswordInput,
+        help_text="Enter API key to update. This field is temporary and not stored in the database."
+    )
+    
+    class Meta:
+        model = SiteConfig
+        fields = '__all__'
+    
+    def save(self, commit=True):
+        """Override save to handle API key if provided"""
+        instance = super().save(commit=commit)
+        
+        # If API key was provided, update the .env file
+        api_key = self.cleaned_data.get('api_key')
+        if api_key:
+            # Get the path to the .env file
+            dotenv_path = os.path.join(settings.BASE_DIR, '.env')
+            
+            # Read existing content
+            content = ""
+            existing_key_line = None
+            if os.path.exists(dotenv_path):
+                with open(dotenv_path, 'r') as f:
+                    lines = f.readlines()
+                    for i, line in enumerate(lines):
+                        if line.startswith('ANTHROPIC_API_KEY='):
+                            existing_key_line = i
+                        else:
+                            content += line
+            
+            # Add or update the API key line
+            new_key_line = f"ANTHROPIC_API_KEY={api_key}\n"
+            
+            if existing_key_line is not None:
+                lines[existing_key_line] = new_key_line
+                content = ''.join(lines)
+            else:
+                content += new_key_line
+            
+            # Write the updated content
+            with open(dotenv_path, 'w') as f:
+                f.write(content)
+            
+            # Update the settings value (this will only last for this request)
+            settings.ANTHROPIC_API_KEY = api_key
+            
+            # We can't access request directly in the form
+            # Messages will be handled by SiteConfigAdmin.save_model
+        
+        return instance
+
+
 @admin.register(SiteConfig)
 class SiteConfigAdmin(VersionAdmin):
+    form = ApiKeyForm
+    
     fieldsets = (
         ('Basic Info', {
             'fields': ('title', 'tagline', 'brand', 'primary_color', 'secondary_color')
@@ -36,9 +96,14 @@ class SiteConfigAdmin(VersionAdmin):
             'fields': ('google_analytics_id', 'maintenance_mode'),
             'classes': ('collapse',)
         }),
+        ('AI Configuration', {
+            'fields': ('_anthropic_api_key_display', 'api_key'),
+            'classes': ('collapse',),
+            'description': 'API key is stored in environment variables for security. You can set it here to update the .env file.'
+        }),
     )
     
-    readonly_fields = ('updated_at',)
+    readonly_fields = ('updated_at', '_anthropic_api_key_display')
     
     def get_urls(self):
         """Add custom URLs for the AI editor interface"""
@@ -94,7 +159,15 @@ class SiteConfigAdmin(VersionAdmin):
                 if obj.custom_css:
                     obj.save_custom_css()
                 
-                # Show success message
+                # Check if API key was updated
+                if form.cleaned_data.get('api_key'):
+                    messages.success(
+                        request, 
+                        "API key has been updated in the .env file. "
+                        "You may need to restart the server for changes to take effect."
+                    )
+                
+                # Show general success message
                 messages.success(request, "Site configuration updated successfully.")
                 
         except Exception as e:
