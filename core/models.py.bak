@@ -14,6 +14,8 @@ class SiteConfig(models.Model):
     This model implements a singleton pattern to ensure only one site configuration exists.
     It stores all configuration in the database and supports version history through django-reversion.
     """
+    # Non-database field for API key updates - used only in forms
+    api_key_update = None
     # Site information fields
     title = models.CharField(max_length=100, default="Mick Blog", help_text="Main site title used in browser tab and header")
     tagline = models.CharField(max_length=200, blank=True, help_text="Short description shown on homepage")

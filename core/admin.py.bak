@@ -13,65 +13,23 @@ from django.conf import settings
 
 from django import forms
 
-class ApiKeyForm(forms.ModelForm):
-    """Custom form for SiteConfig with temporary API key field"""
-    api_key = forms.CharField(
-        required=False, 
-        widget=forms.PasswordInput,
-        help_text="Enter API key to update. This field is temporary and not stored in the database."
+class ApiKeyAdminForm(forms.ModelForm):
+    """Form with direct API key field"""
+    anthropic_api_key = forms.CharField(
+        required=False,
+        label="Anthropic API Key",
+        widget=forms.PasswordInput(attrs={'placeholder': 'Enter API key'}),
+        help_text="Enter your Anthropic API key here. It will be saved to the .env file."
     )
     
     class Meta:
         model = SiteConfig
         fields = '__all__'
-    
-    def save(self, commit=True):
-        """Override save to handle API key if provided"""
-        instance = super().save(commit=commit)
-        
-        # If API key was provided, update the .env file
-        api_key = self.cleaned_data.get('api_key')
-        if api_key:
-            # Get the path to the .env file
-            dotenv_path = os.path.join(settings.BASE_DIR, '.env')
-            
-            # Read existing content
-            content = ""
-            existing_key_line = None
-            if os.path.exists(dotenv_path):
-                with open(dotenv_path, 'r') as f:
-                    lines = f.readlines()
-                    for i, line in enumerate(lines):
-                        if line.startswith('ANTHROPIC_API_KEY='):
-                            existing_key_line = i
-                        else:
-                            content += line
-            
-            # Add or update the API key line
-            new_key_line = f"ANTHROPIC_API_KEY={api_key}\n"
-            
-            if existing_key_line is not None:
-                lines[existing_key_line] = new_key_line
-                content = ''.join(lines)
-            else:
-                content += new_key_line
-            
-            # Write the updated content
-            with open(dotenv_path, 'w') as f:
-                f.write(content)
-            
-            # Update the settings value (this will only last for this request)
-            settings.ANTHROPIC_API_KEY = api_key
-            
-            # We can't access request directly in the form
-            # Messages will be handled by SiteConfigAdmin.save_model
-        
-        return instance
 
 
 @admin.register(SiteConfig)
 class SiteConfigAdmin(VersionAdmin):
-    form = ApiKeyForm
+    form = ApiKeyAdminForm
     
     fieldsets = (
         ('Basic Info', {
@@ -97,7 +55,7 @@ class SiteConfigAdmin(VersionAdmin):
             'classes': ('collapse',)
         }),
         ('AI Configuration', {
-            'fields': ('_anthropic_api_key_display', 'api_key'),
+            'fields': ('_anthropic_api_key_display', 'anthropic_api_key'),
             'classes': ('collapse',),
             'description': 'API key is stored in environment variables for security. You can set it here to update the .env file.'
         }),
@@ -159,8 +117,41 @@ class SiteConfigAdmin(VersionAdmin):
                 if obj.custom_css:
                     obj.save_custom_css()
                 
-                # Check if API key was updated
-                if form.cleaned_data.get('api_key'):
+                # Check if API key was provided in the form
+                api_key = form.cleaned_data.get('anthropic_api_key')
+                if api_key:
+                    # Update the .env file with the new API key
+                    dotenv_path = os.path.join(settings.BASE_DIR, '.env')
+                    
+                    # Read existing content
+                    if os.path.exists(dotenv_path):
+                        with open(dotenv_path, 'r') as f:
+                            lines = f.readlines()
+                    else:
+                        lines = []
+                    
+                    # Look for existing key
+                    new_lines = []
+                    key_updated = False
+                    for line in lines:
+                        if line.startswith('ANTHROPIC_API_KEY='):
+                            new_lines.append(f'ANTHROPIC_API_KEY={api_key}\n')
+                            key_updated = True
+                        else:
+                            new_lines.append(line)
+                    
+                    # Add key if not found
+                    if not key_updated:
+                        new_lines.append(f'ANTHROPIC_API_KEY={api_key}\n')
+                    
+                    # Write updated content
+                    with open(dotenv_path, 'w') as f:
+                        f.writelines(new_lines)
+                    
+                    # Update runtime setting
+                    settings.ANTHROPIC_API_KEY = api_key
+                    
+                    # Show success message
                     messages.success(
                         request, 
                         "API key has been updated in the .env file. "
