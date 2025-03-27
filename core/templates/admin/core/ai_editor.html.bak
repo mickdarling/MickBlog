@@ -211,6 +211,7 @@
         <textarea id="userInput" placeholder="Type your question or request..."></textarea>
         <button id="sendButton" type="button">Send</button>
         <button id="generateConfigButton" type="button" style="margin-left: 10px; background-color: #28a745;">Generate Config</button>
+        <a href="{% url 'admin:config-history' %}" class="button" style="margin-left: 10px; background-color: #17a2b8;">View History</a>
         {% if debug %}
         <button onclick="alert('Direct click handler works')" style="margin-left: 10px; background-color: #dc3545;">Test Alert</button>
         {% endif %}
@@ -221,6 +222,7 @@
     <div class="config-editor">
       <div class="editor-header">
         <h3>Site Configuration</h3>
+        <p class="hint">JSON format with versioning support</p>
       </div>
       
       <div class="editor-content">
@@ -228,11 +230,28 @@
       </div>
       
       <div class="button-group">
-        <button id="applyChangesButton" onclick="console.log('Direct click handler on apply button')">Apply Changes</button>
-        <button id="undoChangesButton" onclick="console.log('Direct click handler on undo button')">Undo Changes</button>
+        <button id="applyChangesButton">Apply Changes</button>
+        <button id="undoChangesButton">Undo Changes</button>
+        <button id="formatJsonButton" style="background-color: #6c757d;">Format JSON</button>
       </div>
     </div>
   </div>
+  
+  <script>
+    // Add JSON formatter button functionality
+    document.getElementById('formatJsonButton').addEventListener('click', function() {
+      const configEditor = document.getElementById('configEditor');
+      if (configEditor) {
+        try {
+          // Parse and re-stringify the JSON with formatting
+          const jsonObject = JSON.parse(configEditor.value);
+          configEditor.value = JSON.stringify(jsonObject, null, 2);
+        } catch (e) {
+          alert('Invalid JSON format: ' + e.message);
+        }
+      }
+    });
+  </script>
   
   <!-- Spinner for loading state -->
   <div id="loadingSpinner" class="loading-spinner" style="display: none;">

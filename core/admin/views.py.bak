@@ -4,6 +4,8 @@ Custom admin views for AI-powered site configuration editor.
 import os
 import json
 import requests
+import traceback
+import reversion
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -17,20 +19,17 @@ from core.models import SiteConfig
 def ai_editor_view(request):
     """Renders the AI editor interface"""
     config = SiteConfig.get()
-    current_config = config.export_to_markdown()
+    config_dict = config.to_dict()
     
-    # Check if Anthropic API key is configured (either in env or model)
-    settings_key = bool(settings.ANTHROPIC_API_KEY)
-    model_key = bool(config.anthropic_api_key)
+    # Convert the dictionary to a readable formatted string for the editor
+    import json
+    current_config = json.dumps(config_dict, indent=2)
     
-    # Only enable the editor if API key is properly configured
-    api_key_configured = settings_key or model_key
+    # Check if Anthropic API key is configured in settings
+    api_key_configured = bool(settings.ANTHROPIC_API_KEY)
     
     # Debug output
-    print(f"AI Editor View: Settings API key configured: {settings_key}")
-    print(f"AI Editor View: Model API key configured: {model_key}")
-    print(f"AI Editor View: API key flag manually set to: {api_key_configured}")
-    print(f"AI Editor View: Actual API key: {config.anthropic_api_key[:5]}... (truncated)")
+    print(f"AI Editor View: Settings API key configured: {api_key_configured}")
     
     context = {
         'title': 'AI Site Configuration Editor',
@@ -38,9 +37,9 @@ def ai_editor_view(request):
         'current_config': current_config,
         'api_key_configured': api_key_configured,
         'debug_info': {
-            'settings_key_present': settings_key,
-            'model_key_present': model_key,
-            'api_key_first_chars': config.anthropic_api_key[:5] if config.anthropic_api_key else 'None'
+            'settings_key_present': api_key_configured,
+            'model_key_present': False,
+            'api_key_first_chars': settings.ANTHROPIC_API_KEY[:5] if settings.ANTHROPIC_API_KEY else 'None'
         }
     }
     return render(request, 'admin/core/ai_editor.html', context)
@@ -144,11 +143,10 @@ def mock_ai_config_view(request):
 @require_http_methods(["POST"])
 def ai_config_view(request):
     """
-    Handles generation of configuration files using the Anthropic Claude API.
+    Handles generation of configuration changes using the Anthropic Claude API.
     
     This view takes a user request message, combines it with the current site configuration,
-    and sends it to the Anthropic Claude API to generate a modified configuration file.
-    The API response is then validated and returned as JSON.
+    and sends it to the Anthropic Claude API to generate updated JSON configuration.
     
     Endpoint: /ai_config/
     Method: POST
@@ -158,7 +156,7 @@ def ai_config_view(request):
         }
     Response Format:
         {
-            "config": "Generated configuration file content"
+            "config": JSON object with updated site configuration
         }
     Or for errors:
         {
@@ -168,17 +166,14 @@ def ai_config_view(request):
             "detail": "Additional error details"
         }
     """
-    # Step 1: Retrieve the API key from settings or model, preferring settings
-    config = SiteConfig.get()
-    settings_key = settings.ANTHROPIC_API_KEY
-    model_key = config.anthropic_api_key
-    api_key = settings_key or model_key
+    # Step 1: Retrieve the API key from settings
+    api_key = settings.ANTHROPIC_API_KEY
     
     # Verify API key is available before proceeding
     if not api_key:
         return JsonResponse({
             'error': 'Anthropic API key not configured',
-            'detail': 'Please add an API key in the site configuration or environment variables.'
+            'detail': 'Please add ANTHROPIC_API_KEY to your environment variables.'
         }, status=500)
     
     try:
@@ -186,69 +181,53 @@ def ai_config_view(request):
         data = json.loads(request.body)
         user_message = data.get('message', '')
         
-        # Get the current site configuration
+        # Get the current site configuration as a dictionary
         config = SiteConfig.get()
-        current_config = config.export_to_markdown()
+        config_dict = config.to_dict()
+        current_config = json.dumps(config_dict, indent=2)
         
         # Step 3: Craft a specialized system prompt for generating configuration changes
-        # This prompt is crucial for getting the exact format we need from the API
-        system_message = f"""You are a YAML configuration file generator for a Django website. 
-Your task is to generate a complete configuration file based on the user's request.
-The current site configuration template is:
+        system_message = f"""You are a configuration assistant for a Django website. 
+Your task is to generate an updated configuration based on the user's request.
+The current site configuration is provided as a JSON object:
 
-```markdown
+```json
 {current_config}
 ```
 
 EXTREMELY IMPORTANT INSTRUCTIONS:
-1. Output ONLY the raw updated configuration file with the requested changes applied
-2. DO NOT add any explanation, comments, or introduction text
-3. DO NOT use markdown code blocks in your output - just return the raw file content
-4. ALWAYS begin your output with "# Site Configuration Template"
-5. Include ALL sections from the original file EXACTLY as they appear
-6. Only modify the SPECIFIC fields mentioned in the user request
-7. Maintain EXACT same formatting, indentation, and structure as the original file
-8. For YAML fields, preserve the exact same quoting style as the original
+1. Output ONLY the updated JSON configuration with the requested changes applied
+2. Do NOT include any explanations, markdown formatting, or code blocks
+3. Your output must be valid JSON that can be parsed with json.loads()
+4. Maintain the exact same structure as the original configuration
+5. Only modify the specific fields mentioned in the user request
+6. For all other fields, keep their original values
+7. DO NOT remove any fields from the original configuration
+8. DO NOT add any fields that weren't in the original configuration
 
-Example user request: "Change the site title to Mick Blog"
-Example response:
-# Site Configuration Template
+For example, if the user asks to change the site title, you should return the entire config object 
+with ONLY the title field modified in the site_info section.
 
-This markdown file allows you to easily customize the content, style, and configuration of your MickBlog site. Edit the sections below and migrate the database to apply changes.
-
-## Site Information
-
-```yaml
-brand: MB
-footer_text: "© 2025 Your Name. All rights reserved."
-meta_description: Personal blog and portfolio site showcasing blog posts, projects, resume, and contact information.
-tagline: Projects, Posts, Resume, and Contact Info
-title: Mick Blog
-
-```
-
-[... rest of file unchanged ...]
+Always validate that your response is proper JSON before returning it.
 """
 
         # Step 4: Prepare the message array with the user's request
         api_messages = [
-            {"role": "user", "content": f"Update the configuration file with this change: {user_message}"}
+            {"role": "user", "content": f"Update the site configuration with this change: {user_message}"}
         ]
         
-        # Step 5: Set up API request headers with both authorization formats
-        # We include both formats for compatibility with different API versions
+        # Step 5: Set up API request headers
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": api_key,  # For backward compatibility with older API versions
-            "Authorization": f"Bearer {api_key}", # Current bearer token format
-            "anthropic-version": "2023-06-01" # Specific API version for stability
+            "Authorization": f"Bearer {api_key}",
+            "anthropic-version": "2023-06-01"
         }
         
         # Step 6: Prepare the request body with parameters optimized for configuration generation
         request_body = {
-            "model": "claude-3-sonnet-20240229", # Specific model version for consistent results
-            "max_tokens": 4000,  # Generous token limit to ensure full config is returned
-            "temperature": 0.3,  # Lower temperature for more deterministic, predictable output
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 4000,
+            "temperature": 0.2,  # Lower temperature for more deterministic output
             "messages": api_messages,
             "system": system_message
         }
@@ -258,11 +237,9 @@ title: Mick Blog
         
         # Step 7: Make the API request with comprehensive error handling
         try:
-            # Log detailed request information before sending
-            print(f"CONFIG GENERATION: Sending request to Anthropic API with key length: {len(api_key)}")
-            print(f"CONFIG GENERATION: Request headers: {headers}")
+            # Log essential request information
+            print(f"CONFIG GENERATION: Sending request to Anthropic API")
             print(f"CONFIG GENERATION: Using model: {request_body['model']}")
-            print(f"CONFIG GENERATION: System message length: {len(system_message)}")
             print(f"CONFIG GENERATION: User message: {user_message}")
             
             # Send the API request
@@ -270,18 +247,17 @@ title: Mick Blog
                 "https://api.anthropic.com/v1/messages",
                 headers=headers,
                 json=request_body,
-                timeout=60  # Increased timeout for reliability
+                timeout=60
             )
             
             # Log response status immediately
             print(f"CONFIG GENERATION: Received response with status code: {response.status_code}")
             
         except requests.exceptions.RequestException as e:
-            # Handle network-related errors (timeouts, connection failures, etc.)
+            # Handle network-related errors
             error_detail = str(e)
             print(f"CONFIG GENERATION: Request exception: {error_detail}")
             
-            # Return a structured error response with helpful details
             return JsonResponse({
                 'error': f"API connection error: {error_detail}",
                 'detail': "Failed to connect to the Anthropic API. Please check your network connection and try again."
@@ -313,12 +289,8 @@ title: Mick Blog
                 elif 'type' in error_data and 'message' in error_data:
                     error_message = f"{error_data.get('type')}: {error_data.get('message')}"
                     error_type = error_data.get('type', 'api_error')
-            except ValueError as e:
-                # Handle non-JSON responses
-                error_message = f"Non-JSON error response: {response_text[:200]}"
-                print(f"CONFIG GENERATION: Failed to parse JSON: {str(e)}")
             except Exception as e:
-                # Catch-all for any other error handling issues
+                # Catch-all for any error handling issues
                 error_message = f"Failed to parse error response: {str(e)}"
                 print(f"CONFIG GENERATION: Exception while handling error: {str(e)}")
                 
@@ -336,21 +308,39 @@ title: Mick Blog
         response_data = response.json()
         ai_response = response_data['content'][0]['text']
         
-        # Clean up and validate the response format
+        # Clean up the response - remove any markdown formatting if present
         cleaned_response = ai_response.strip()
-        print(f"CONFIG RESPONSE: {cleaned_response[:100]}...")
         
-        # Ensure the response has the correct header format
-        if not cleaned_response.startswith("# Site Configuration"):
-            print("WARNING: Adding missing header to config response")
-            cleaned_response = "# Site Configuration Template\n\n" + cleaned_response
+        # If response is wrapped in code blocks, extract the JSON
+        if cleaned_response.startswith("```json") or cleaned_response.startswith("```"):
+            import re
+            matches = re.findall(r'```(?:json)?\s*([\s\S]*?)\s*```', cleaned_response)
+            if matches:
+                cleaned_response = matches[0].strip()
         
-        # Step 10: Return the validated configuration
-        return JsonResponse({'config': cleaned_response})
+        # Validate that the response is valid JSON
+        try:
+            # Parse the JSON to ensure it's valid
+            updated_config = json.loads(cleaned_response)
+            
+            # Log successful parsing
+            print(f"CONFIG RESPONSE: Successfully parsed JSON response")
+            
+            # Step 10: Return the validated configuration
+            return JsonResponse({'config': updated_config})
+            
+        except json.JSONDecodeError as e:
+            # If the response isn't valid JSON, return an error
+            print(f"CONFIG RESPONSE: Invalid JSON in response: {e}")
+            return JsonResponse({
+                'error': "Invalid JSON in API response",
+                'detail': f"The API returned a response that could not be parsed as JSON: {str(e)}"
+            }, status=500)
             
     except Exception as e:
         # Catch-all exception handler for any unhandled errors
         print(f"Error in ai_config_view: {str(e)}")
+        traceback.print_exc()
         return JsonResponse({
             'error': f"Error: {str(e)}",
             'detail': "An unexpected error occurred while processing your request."
@@ -365,7 +355,6 @@ def ai_message_view(request):
     
     This view takes a user message (and optionally message history) and sends it to the
     Anthropic Claude API to get a conversational response about site configuration options.
-    It can also generate configuration files directly if the generate_config flag is set.
     
     Endpoint: /ai_message/
     Method: POST
@@ -375,41 +364,29 @@ def ai_message_view(request):
             "history": [
                 {"role": "user", "content": "Previous user message"},
                 {"role": "assistant", "content": "Previous assistant response"}
-            ],
-            "generate_config": false  // Optional boolean to generate config instead of conversation
+            ]
         }
     Response Format:
         {
             "reply": "Assistant's conversational response"
         }
-    Or for config generation:
-        {
-            "config": "Generated configuration file content"
-        }
     Or for errors:
         {
             "error": "Error message",
-            "status_code": 500,  // Optional
-            "error_type": "api_error",  // Optional
             "detail": "Additional error details"  // Optional
         }
     """
     # Step 1: Retrieve and validate the API key
-    config = SiteConfig.get()
-    settings_key = settings.ANTHROPIC_API_KEY
-    model_key = config.anthropic_api_key
-    api_key = settings_key or model_key
+    api_key = settings.ANTHROPIC_API_KEY
     
     # Log API key availability for debugging
-    print(f"AI Message View: Settings API key available: {bool(settings_key)}")
-    print(f"AI Message View: Model API key available: {bool(model_key)}")
-    print(f"AI Message View: Using API key: {api_key[:5]}... (truncated)")
+    print(f"AI Message View: API key available: {bool(api_key)}")
     
     # Verify API key is available
     if not api_key:
         return JsonResponse({
             'error': 'Anthropic API key not configured',
-            'detail': 'Please add an API key in the site configuration or environment variables.'
+            'detail': 'Please add ANTHROPIC_API_KEY to your environment variables.'
         }, status=500)
     
     try:
@@ -417,53 +394,31 @@ def ai_message_view(request):
         data = json.loads(request.body)
         user_message = data.get('message', '')
         message_history = data.get('history', [])
-        generate_config = data.get('generate_config', False)
         
         # Get the current site configuration for reference
         config = SiteConfig.get()
-        current_config = config.export_to_markdown()
+        config_dict = config.to_dict()
+        current_config = json.dumps(config_dict, indent=2)
         
-        # Step 3: Create the appropriate system message based on the request type
-        if generate_config:
-            # System message optimized for configuration file generation
-            system_message = f"""You are a Django site configuration assistant. 
-Your task is to generate a complete configuration file based on the user's request.
-The current site configuration is shown below:
-
-```markdown
-{current_config}
-```
-
-IMPORTANT FORMATTING INSTRUCTIONS:
-1. Output ONLY the complete markdown file without any introduction or explanation
-2. Make sure to include the ENTIRE file content, with the user's requested changes applied
-3. Keep ALL sections even if unchanged, including the '# Site Configuration Template' header
-4. Maintain the exact same structure and format as the original file
-5. The output should be a direct drop-in replacement for site_config.md
-6. Do not add any text before or after the markdown file - just output the raw file content
-
-YOU MUST START WITH: # Site Configuration Template
-"""
-        else:
-            # System message optimized for conversational responses
-            system_message = f"""You are a Django site configuration assistant. 
-You help edit the site_config.md file for a Django blog site.
+        # Step 3: Create the system message for conversational responses
+        system_message = f"""You are a Django site configuration assistant. 
+You help users configure their Django-based personal website.
 The current site configuration is shown below (for your reference only):
 
-```markdown
+```json
 {current_config}
 ```
 
-IMPORTANT FORMATTING INSTRUCTIONS:
-1. Do NOT include the complete configuration file in your responses
-2. Instead, explain what changes you would make to fulfill the user's request
-3. Be specific about what fields you would change and to what values
-4. Keep your responses conversational and helpful
+IMPORTANT INSTRUCTIONS:
+1. You are helping the user make changes to their site configuration
+2. Be specific about what fields the user can change and what values are valid
+3. Keep your responses conversational, helpful, and to the point
+4. Explain where changes would be visible on the site
+5. Do NOT include the complete configuration in your responses
+6. If the user asks to make specific changes, tell them what fields would be updated
 
 Example response:
 "I'd update the site title from 'Mick's Blog' to 'VibeBlog'. This change would appear in the browser title bar and anywhere the site title is displayed."
-
-Be specific and helpful with your suggestions, but do NOT include markdown code blocks with the full configuration.
 """
         
         # Step 4: Prepare the message array with conversation history
@@ -483,100 +438,74 @@ Be specific and helpful with your suggestions, but do NOT include markdown code 
         # Add the current user message
         api_messages.append({"role": "user", "content": user_message})
         
-        # Step 5: Set up API request headers with both authorization formats
+        # Step 5: Set up API request headers
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": api_key,  # For backward compatibility with older versions
-            "Authorization": f"Bearer {api_key}",  # Current standard bearer token format
-            "anthropic-version": "2023-06-01"  # Specific API version for stability
+            "Authorization": f"Bearer {api_key}",
+            "anthropic-version": "2023-06-01"
         }
         
-        # Step 6: Prepare request body with parameters optimized based on request type
+        # Step 6: Prepare request body
         request_body = {
-            "model": "claude-3-sonnet-20240229",  # Specific model version for consistency
-            "max_tokens": 4000,  # Generous token limit for comprehensive responses
-            "temperature": 0.7,  # Higher temperature for more creative, natural conversation
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 4000,
+            "temperature": 0.7,  # Higher temperature for more creative conversation
             "messages": api_messages,
             "system": system_message
         }
         
-        # Log request type and key information
-        print(f"API Request type: {'CONFIG GENERATION' if generate_config else 'CONVERSATION'}")
-        print(f"API Key format: {api_key[:5]}... (length: {len(api_key)})")
+        # Log request info
+        print(f"AI_MESSAGE: Sending request to Anthropic API")
+        print(f"AI_MESSAGE: Using model: {request_body['model']}")
+        print(f"AI_MESSAGE: Message history length: {len(message_history)}")
+        print(f"AI_MESSAGE: Current user message: {user_message}")
         
-        # Step 7: Make the API request with comprehensive error handling
+        # Step 7: Make the API request with error handling
         try:
-            # Log detailed request information before sending
-            print(f"AI_MESSAGE: Sending request to Anthropic API with key length: {len(api_key)}")
-            print(f"AI_MESSAGE: Using model: {request_body['model']}")
-            print(f"AI_MESSAGE: System message length: {len(system_message)}")
-            print(f"AI_MESSAGE: Message history length: {len(message_history)}")
-            print(f"AI_MESSAGE: Current user message: {user_message}")
-            
             # Send the API request
             response = requests.post(
                 "https://api.anthropic.com/v1/messages",
                 headers=headers,
                 json=request_body,
-                timeout=60  # Increased timeout for reliability
+                timeout=60
             )
             
-            # Log response status immediately
+            # Log response status
             print(f"AI_MESSAGE: Received response with status code: {response.status_code}")
             
         except requests.exceptions.RequestException as e:
-            # Handle network-related errors with detailed logging
+            # Handle network-related errors
             error_detail = str(e)
             print(f"AI_MESSAGE: Request exception: {error_detail}")
             
-            # Return a structured error response with helpful details
             return JsonResponse({
                 'error': f"API connection error: {error_detail}",
-                'detail': "Failed to connect to the Anthropic API. Please check your network connection and try again."
+                'detail': "Failed to connect to the Anthropic API. Please check your network connection."
             }, status=500)
         
-        # Step 8: Handle non-successful API responses with detailed error extraction
+        # Step 8: Handle non-successful API responses
         if response.status_code != 200:
             error_message = "Unknown error"
-            error_type = "api_error"
-            response_text = ""
             
             try:
-                # Get full response text for comprehensive logging
+                # Try to extract error details from the response
                 response_text = response.text
-                print(f"AI_MESSAGE: Full error response: {response_text}")
-                
-                # Try to parse response as JSON for structured error details
                 error_data = response.json()
-                print(f"AI_MESSAGE: JSON error data: {error_data}")
                 
-                # Extract the most useful error information in various API response formats
+                # Extract structured error information if available
                 if 'error' in error_data:
                     if isinstance(error_data['error'], dict):
                         error_message = error_data['error'].get('message', 'Unknown error')
-                        error_type = error_data['error'].get('type', 'api_error')
                     else:
                         error_message = str(error_data['error'])
-                elif 'type' in error_data and 'message' in error_data:
-                    error_message = f"{error_data.get('type')}: {error_data.get('message')}"
-                    error_type = error_data.get('type', 'api_error')
-            except ValueError as e:
-                # Handle non-JSON responses
-                error_message = f"Non-JSON error response: {response_text[:200]}"
-                print(f"AI_MESSAGE: Failed to parse JSON: {str(e)}")
             except Exception as e:
-                # Catch-all for any other error handling issues
-                error_message = f"Failed to parse error response: {str(e)}"
-                print(f"AI_MESSAGE: Exception while handling error: {str(e)}")
+                error_message = f"Error parsing API response: {str(e)}"
                 
             print(f"AI_MESSAGE: API Error: {error_message}")
             
-            # Return a comprehensive error response with all available information
             return JsonResponse({
                 'error': f"API Error: {error_message}",
-                'status_code': response.status_code,
-                'error_type': error_type,
-                'detail': "The Anthropic API returned an error. Please check the API key and try again."
+                'detail': "The Anthropic API returned an error."
             }, status=500)
         
         # Step 9: Process the successful API response
@@ -584,52 +513,24 @@ Be specific and helpful with your suggestions, but do NOT include markdown code 
             response_data = response.json()
             ai_response = response_data['content'][0]['text']
             
-            # Handle the response differently based on the request type
-            if generate_config:
-                # For config generation, clean up and validate the response format
-                cleaned_response = ai_response.strip()
-                
-                # Log the response for debugging
-                print(f"CONFIG GENERATION RESPONSE: {cleaned_response[:100]}...")
-                
-                # Validate and fix the response format if needed
-                if not cleaned_response.startswith("# Site Configuration"):
-                    print("WARNING: Config response doesn't start with expected header")
-                    
-                    # If the response is wrapped in markdown code blocks, extract the content
-                    if "```" in cleaned_response:
-                        import re
-                        matches = re.findall(r'```(?:markdown)?\s*([\s\S]*?)\s*```', cleaned_response)
-                        if matches:
-                            cleaned_response = matches[0].strip()
-                            print(f"Extracted from code blocks: {cleaned_response[:100]}...")
-                    
-                    # If still not formatted correctly, add the required header
-                    if not cleaned_response.startswith("# Site Configuration"):
-                        print("Adding header to config response")
-                        cleaned_response = "# Site Configuration Template\n\n" + cleaned_response
-                
-                # Return the properly formatted configuration file
-                return JsonResponse({
-                    'config': cleaned_response
-                })
-            else:
-                # For conversation mode, just return the AI's reply directly
-                return JsonResponse({
-                    'reply': ai_response
-                })
+            # For conversation mode, just return the AI's reply directly
+            return JsonResponse({
+                'reply': ai_response
+            })
                 
         except Exception as e:
-            # Handle any errors that occur while processing the API response
+            # Handle any errors while processing the API response
             print(f"Error processing response: {e}")
+            traceback.print_exc()
             return JsonResponse({
                 'error': f"Error processing response: {str(e)}",
                 'detail': "The API returned a successful response, but there was an error processing it."
             }, status=500)
             
     except Exception as e:
-        # Catch-all exception handler for any unhandled errors
+        # Catch-all exception handler
         print(f"Error in ai_message_view: {str(e)}")
+        traceback.print_exc()
         return JsonResponse({
             'error': f"Error: {str(e)}",
             'detail': "An unexpected error occurred while processing your request."
@@ -676,15 +577,14 @@ def mock_apply_changes_view(request):
 @require_http_methods(["POST"])
 def apply_changes_view(request):
     """
-    Applies the AI-suggested changes to the site configuration by:
-    1. Writing the new configuration to site_config.md
-    2. Running the update_site_config management command to sync the file to the database
+    Applies the AI-suggested changes to the site configuration by
+    directly updating the database model from JSON data.
     
     Endpoint: /apply_changes/
     Method: POST
     Request Format:
         {
-            "config": "Complete updated configuration file content"
+            "config": JSON object with site configuration data
         }
     Response Format:
         {
@@ -702,55 +602,115 @@ def apply_changes_view(request):
     try:
         # Step 1: Parse and validate the request data
         data = json.loads(request.body)
-        new_config = data.get('config', '')
+        new_config_json = data.get('config', '')
         
         # Ensure we have a configuration to apply
-        if not new_config:
+        if not new_config_json:
             return JsonResponse({
                 'error': 'No configuration provided',
-                'detail': 'The request must include a complete configuration file.'
+                'detail': 'The request must include a configuration object.'
             }, status=400)
         
-        # Step 2: Validate the configuration format
-        if not new_config.startswith("# Site Configuration"):
-            print("WARNING: Configuration doesn't start with expected header")
-            return JsonResponse({
-                'error': 'Invalid configuration format',
-                'detail': 'The configuration must start with "# Site Configuration Template"'
-            }, status=400)
+        # Parse the config JSON if it's a string
+        if isinstance(new_config_json, str):
+            try:
+                new_config_data = json.loads(new_config_json)
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'error': 'Invalid JSON configuration',
+                    'detail': 'The configuration must be a valid JSON object.'
+                }, status=400)
+        else:
+            new_config_data = new_config_json
             
-        # Step 3: Save the new configuration to the site_config.md file
-        config_path = os.path.join(settings.BASE_DIR, 'site_config.md')
-        print(f"Writing new configuration to {config_path}")
+        # Get the current configuration
+        config = SiteConfig.get()
         
-        try:
-            with open(config_path, 'w') as f:
-                f.write(new_config)
-            print(f"Successfully wrote {len(new_config)} characters to configuration file")
-        except IOError as e:
-            print(f"Error writing to configuration file: {str(e)}")
-            return JsonResponse({
-                'error': f"Error writing configuration file: {str(e)}",
-                'detail': "Failed to save the new configuration to disk."
-            }, status=500)
-            
-        # Step 4: Update the database from the file using the management command
-        try:
-            print("Running update_site_config management command...")
-            call_command('update_site_config')
-            print("Configuration successfully updated in database")
-        except Exception as e:
-            print(f"Error updating database from configuration file: {str(e)}")
-            return JsonResponse({
-                'error': f"Error updating database: {str(e)}",
-                'detail': "The configuration file was saved but couldn't be synced to the database."
-            }, status=500)
+        # Update configuration with reversion tracking
+        with reversion.create_revision():
+            # Step 2: Update fields from the JSON data
+            try:
+                # Basic site info
+                if 'site_info' in new_config_data:
+                    site_info = new_config_data['site_info']
+                    config.title = site_info.get('title', config.title)
+                    config.tagline = site_info.get('tagline', config.tagline)
+                    config.brand = site_info.get('brand', config.brand)
+                    config.footer_text = site_info.get('footer_text', config.footer_text)
+                    config.meta_description = site_info.get('meta_description', config.meta_description)
+                
+                # Colors
+                if 'colors' in new_config_data:
+                    colors = new_config_data['colors']
+                    config.primary_color = colors.get('primary_color', config.primary_color)
+                    config.secondary_color = colors.get('secondary_color', config.secondary_color)
+                
+                # Content
+                if 'content' in new_config_data:
+                    content = new_config_data['content']
+                    if 'about_text' in content:
+                        config.about_text = content['about_text']
+                
+                # Contact info
+                if 'contact' in new_config_data:
+                    contact = new_config_data['contact']
+                    config.email = contact.get('email', config.email)
+                    config.phone = contact.get('phone', config.phone)
+                    config.address = contact.get('address', config.address)
+                
+                # Social media
+                if 'social' in new_config_data:
+                    social = new_config_data['social']
+                    config.github_url = social.get('github_url', config.github_url)
+                    config.linkedin_url = social.get('linkedin_url', config.linkedin_url)
+                    config.twitter_url = social.get('twitter_url', config.twitter_url)
+                    config.facebook_url = social.get('facebook_url', config.facebook_url)
+                    config.instagram_url = social.get('instagram_url', config.instagram_url)
+                    config.bluesky_url = social.get('bluesky_url', config.bluesky_url)
+                
+                # Analytics
+                if 'analytics' in new_config_data:
+                    analytics = new_config_data['analytics']
+                    config.google_analytics_id = analytics.get('google_analytics_id', config.google_analytics_id)
+                
+                # Appearance
+                if 'appearance' in new_config_data:
+                    appearance = new_config_data['appearance']
+                    config.custom_css = appearance.get('custom_css', config.custom_css)
+                
+                # System
+                if 'system' in new_config_data:
+                    system = new_config_data['system']
+                    config.maintenance_mode = system.get('maintenance_mode', config.maintenance_mode)
+                
+                # Step 3: Save the configuration to the database
+                config.save()
+                
+                # Set revision metadata
+                if request.user.is_authenticated:
+                    reversion.set_user(request.user)
+                reversion.set_comment("Updated via AI Editor")
+                
+                # Step 4: Export custom CSS to file
+                if config.custom_css:
+                    config.save_custom_css()
+                
+                print("Configuration successfully updated in database")
+                
+            except Exception as e:
+                print(f"Error updating configuration: {str(e)}")
+                traceback.print_exc()
+                return JsonResponse({
+                    'error': f"Error updating configuration: {str(e)}",
+                    'detail': "Failed to update the site configuration in the database."
+                }, status=500)
         
         # Step 5: Return success response
         return JsonResponse({
             'success': True, 
-            'message': 'Configuration updated successfully in both file and database.'
+            'message': 'Configuration updated successfully.'
         })
+        
     except json.JSONDecodeError as e:
         # Handle JSON parsing errors
         print(f"JSON parsing error: {str(e)}")
@@ -761,6 +721,7 @@ def apply_changes_view(request):
     except Exception as e:
         # Catch-all exception handler
         print(f"Error in apply_changes_view: {str(e)}")
+        traceback.print_exc()
         return JsonResponse({
             'error': f"Error applying changes: {str(e)}",
             'detail': "An unexpected error occurred while updating the configuration."

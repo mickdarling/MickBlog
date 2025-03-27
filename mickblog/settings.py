@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'markdown_deux',
     'sslserver',
     'django_extensions',
+    'reversion',  # For model history tracking
     
     # Local apps
     'core',

@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_changelist' %}">Site configurations</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_change' config.pk %}">{{ config }}</a>
+    &rsaquo; History
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>History for {{ config }}</h1>
+    
+    <div class="module">
+        {% if history %}
+            <table id="change-history">
+                <thead>
+                    <tr>
+                        <th scope="col">Date/time</th>
+                        <th scope="col">User</th>
+                        <th scope="col">Comment</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for version in history %}
+                    <tr>
+                        <th scope="row">{{ version.revision.date_created|date:"DATETIME_FORMAT" }}</th>
+                        <td>
+                            {% if version.revision.user %}
+                                {{ version.revision.user.get_username }}
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
+                        <td>{{ version.revision.comment|default:"&mdash;" }}</td>
+                        <td>
+                            <a href="{% url 'admin:core_siteconfig_revision' config.pk version.pk %}" class="historylink">View this version</a>
+                            {% if not forloop.first %}
+                                &nbsp;|&nbsp;
+                                <a href="{% url 'admin:core_siteconfig_recover' version.pk %}" class="recoverlink">Revert to this version</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>This {{ opts.verbose_name }} has no revision history.</p>
+        {% endif %}
+    </div>
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:core_siteconfig_change' config.pk %}" class="button default">Back to Configuration</a>
+        <a href="{% url 'admin:ai-config-editor' %}" class="button" style="background: #28a745;">AI Editor</a>
+    </div>
+</div>
+{% endblock %}

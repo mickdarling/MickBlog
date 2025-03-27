@@ -1,20 +1,18 @@
 import os
-import subprocess
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.conf import settings
 from markdownx.models import MarkdownxField
 from markdownx.utils import markdownify
-from pathlib import Path
+import reversion
 
 
+@reversion.register()
 class SiteConfig(models.Model):
     """
     Singleton model for site-wide configuration.
     
-    This model implements a singleton pattern to ensure only one site configuration exists.    
-    It maintains a two-way sync between the database and site_config.md file using Django signals.
+    This model implements a singleton pattern to ensure only one site configuration exists.
+    It stores all configuration in the database and supports version history through django-reversion.
     """
     # Site information fields
     title = models.CharField(max_length=100, default="Mick Blog", help_text="Main site title used in browser tab and header")
@@ -51,17 +49,11 @@ class SiteConfig(models.Model):
     maintenance_mode = models.BooleanField(default=False, help_text="Enable maintenance mode for the site")
     meta_description = models.TextField(blank=True, help_text="SEO description for the site") 
     
-    # AI configuration
-    anthropic_api_key = models.CharField(max_length=255, blank=True, help_text="Anthropic API key for AI-powered site configuration editor - usually 83 characters or longer")
+    # Custom CSS content
+    custom_css = models.TextField(blank=True, help_text="Custom CSS to be applied to the entire site")
     
-    # Public class variable to control signal triggering
-    # This avoids attribute errors when checking for _skip_signal
-    skip_signal = False
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Instance level flag to prevent infinite loops in signals
-        self._skip_signal = False
+    # Updated timestamp
+    updated_at = models.DateTimeField(auto_now=True, help_text="When this configuration was last updated")
     
     class Meta:
         verbose_name = "Site Configuration"
@@ -75,14 +67,8 @@ class SiteConfig(models.Model):
         # This ensures there's only ever one SiteConfig instance
         self.pk = 1
         
-        # Debug print to track save operations - would be better with proper logging
-        print(f"MODEL SAVE: Saving SiteConfig with title={self.title}, skip_signal={getattr(self, '_skip_signal', False)}")
-        
         # Save to database
         super().save(*args, **kwargs)
-        
-        # Debug print after save
-        print(f"MODEL SAVE COMPLETE: SiteConfig saved with id={self.pk}")
     
     @classmethod
     def get(cls):
@@ -103,143 +89,66 @@ class SiteConfig(models.Model):
         """
         return markdownify(self.about_text)
     
-    def export_to_markdown(self):
+    def get_custom_css_path(self):
         """
-        Export the current configuration to markdown format.
-        
-        This formats all configuration fields into a structured markdown document
-        with appropriate YAML and code blocks, matching the format expected by
-        the update_site_config management command.
-        
-        Returns:
-            str: The markdown representation of the site configuration
+        Returns the path to the custom CSS file.
         """
-        # Build the markdown content section by section
-        markdown = "# Site Configuration Template\n\n"
-        markdown += "This markdown file allows you to easily customize the content, style, and configuration of your MickBlog site. Edit the sections below and migrate the database to apply changes.\n\n"
+        return os.path.join(settings.STATIC_ROOT, 'css', 'custom.css')
         
-        # Site Information section
-        markdown += "## Site Information\n\n"
-        markdown += "```yaml\n"
-        markdown += f"brand: {self.brand}\n"
-        markdown += f"footer_text: \"{self.footer_text}\"\n"
-        markdown += f"meta_description: {self.meta_description}\n"
-        markdown += f"tagline: {self.tagline}\n"
-        markdown += f"title: {self.title}\n\n"
-        markdown += "```\n\n"
-        
-        # Colors and Styling
-        markdown += "## Colors and Styling\n\n"
-        markdown += "```yaml\n"
-        markdown += f"primary_color: '{self.primary_color}'\n"
-        markdown += f"secondary_color: '{self.secondary_color}'\n\n"
-        markdown += "```\n\n"
-        
-        # Custom CSS - placeholder section
-        markdown += "## Custom CSS\n\n"
-        markdown += "Add any custom CSS below. This will be applied to the entire site.\n\n"
-        
-        # Read the custom CSS file if it exists
-        custom_css = ""
-        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'custom.css')
-        if os.path.exists(css_path):
-            with open(css_path, 'r') as f:
-                custom_css = f.read()
-        
-        markdown += "```css\n"
-        markdown += custom_css if custom_css else "/* Custom CSS styles */\n"
-        markdown += "```\n\n"
-        
-        # About Me section
-        markdown += "## About Me\n\n"
-        markdown += "Write your about information in markdown format below.\n\n"
-        markdown += "```markdown\n"
-        markdown += self.about_text if self.about_text else "I am a software developer with experience in web development."
-        markdown += "\n```\n\n"
-        
-        # Contact Information
-        markdown += "## Contact Information\n\n"
-        markdown += "```yaml\n"
-        markdown += f"address: '{self.address}'\n"
-        markdown += f"email: {self.email}\n"
-        markdown += f"phone: '{self.phone}'\n\n"
-        markdown += "```\n\n"
-        
-        # Social Media
-        markdown += "## Social Media\n\n"
-        markdown += "```yaml\n"
-        markdown += f"bluesky_url: {self.bluesky_url}\n"
-        markdown += f"facebook_url: {self.facebook_url}\n"
-        markdown += f"github_url: {self.github_url}\n"
-        markdown += f"instagram_url: {self.instagram_url}\n"
-        markdown += f"linkedin_url: {self.linkedin_url}\n\n"
-        markdown += "```\n\n"
-        
-        # Google Analytics
-        markdown += "## Google Analytics\n\n"
-        markdown += "```yaml\n"
-        markdown += f"google_analytics_id: {self.google_analytics_id}\n\n"
-        markdown += "```\n\n"
-        
-        # AI Configuration
-        markdown += "## AI Configuration\n\n"
-        markdown += "```yaml\n"
-        markdown += f"anthropic_api_key: {self.anthropic_api_key}\n\n"
-        markdown += "```\n\n"
-        
-        # How to apply changes section
-        markdown += "---\n\n"
-        markdown += "## How to Apply Changes\n\n"
-        markdown += "After updating this file, run the following management command to apply the changes to your site:\n\n"
-        markdown += "```bash\n"
-        markdown += "python manage.py update_site_config\n"
-        markdown += "```\n\n"
-        markdown += "This will parse the markdown file and update the database with the new configuration."
-        
-        return markdown
-
-
-# Thread-safe synchronization mechanism
-# This flag prevents multiple concurrent exports which could corrupt the file
-_export_in_progress = False
-
-@receiver(post_save, sender=SiteConfig)
-def export_config_to_file(sender, instance, created, **kwargs):
-    """
-    Export site configuration to markdown file when the model is saved.
-    
-    This signal handler implements a one-way sync from database to file,
-    ensuring the site_config.md file always reflects the current database state.
-    The complementary update_site_config management command handles file-to-database sync.
-    
-    Thread safety is implemented using the _export_in_progress flag and _skip_signal attribute
-    to prevent infinite loops that could occur with bidirectional sync.
-    """
-    global _export_in_progress
-    
-    # Log that signal was received
-    print(f"POST_SAVE SIGNAL: Received for SiteConfig id={instance.pk}, title={instance.title}")
-    
-    # Skip if signaled to do so (to prevent infinite loops) or if an export is already in progress
-    if getattr(instance, '_skip_signal', False) or _export_in_progress:
-        print(f"POST_SAVE SIGNAL: Skipping export. skip_signal={getattr(instance, '_skip_signal', False)}, export_in_progress={_export_in_progress}")
-        return
-    
-    print(f"POST_SAVE SIGNAL: Exporting config to file for title={instance.title}")
-    
-    # Set flag to prevent reentry - ensures only one export happens at a time
-    _export_in_progress = True
-    
-    try:
-        # Run the export_site_config command directly to update the file
-        # This approach allows reusing all the file formatting logic in the command
-        from django.core import management
-        management.call_command('export_site_config', verbosity=1)
-        print("POST_SAVE SIGNAL: Site configuration exported to file successfully")
-    except Exception as e:
-        import traceback
-        print(f"POST_SAVE SIGNAL: Error exporting site configuration: {e}")
-        traceback.print_exc()
-    finally:
-        # Always clear the flag when done to prevent deadlocks
-        _export_in_progress = False
+    def save_custom_css(self):
+        """
+        Save the custom CSS to a file in the static directory.
+        This allows it to be served efficiently by the web server.
+        """
+        if self.custom_css:
+            css_dir = os.path.join(settings.STATIC_ROOT, 'css')
+            os.makedirs(css_dir, exist_ok=True)
+            
+            css_file = os.path.join(css_dir, 'custom.css')
+            with open(css_file, 'w') as f:
+                f.write(self.custom_css)
+                
+    def to_dict(self):
+        """
+        Returns a dictionary representation of the configuration.
+        Useful for serialization and AI processing.
+        """
+        return {
+            'site_info': {
+                'title': self.title,
+                'tagline': self.tagline,
+                'brand': self.brand,
+                'footer_text': self.footer_text,
+                'meta_description': self.meta_description,
+            },
+            'colors': {
+                'primary_color': self.primary_color,
+                'secondary_color': self.secondary_color,
+            },
+            'content': {
+                'about_text': self.about_text,
+            },
+            'contact': {
+                'email': self.email,
+                'phone': self.phone,
+                'address': self.address,
+            },
+            'social': {
+                'github_url': self.github_url,
+                'linkedin_url': self.linkedin_url,
+                'twitter_url': self.twitter_url,
+                'facebook_url': self.facebook_url,
+                'instagram_url': self.instagram_url,
+                'bluesky_url': self.bluesky_url,
+            },
+            'analytics': {
+                'google_analytics_id': self.google_analytics_id,
+            },
+            'appearance': {
+                'custom_css': self.custom_css,
+            },
+            'system': {
+                'maintenance_mode': self.maintenance_mode,
+                'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            }
+        }

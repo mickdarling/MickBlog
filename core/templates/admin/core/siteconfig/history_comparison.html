@@ -1,0 +1,84 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_changelist' %}">Site configurations</a>
+    &rsaquo; <a href="{% url 'admin:core_siteconfig_change' config.pk %}">{{ config }}</a>
+    &rsaquo; <a href="{% url 'admin:config-history' %}">History</a>
+    &rsaquo; Compare Versions
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Compare Versions</h1>
+    
+    <div class="module">
+        <h2>Version Details</h2>
+        <table>
+            <tr>
+                <th>From Version</th>
+                <td>{{ version_a.revision.date_created|date:"DATETIME_FORMAT" }}</td>
+                <td>
+                    {% if version_a.revision.user %}
+                        {{ version_a.revision.user.get_username }}
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+                <td>{{ version_a.revision.comment|default:"&mdash;" }}</td>
+            </tr>
+            <tr>
+                <th>To Version</th>
+                <td>{{ version_b.revision.date_created|date:"DATETIME_FORMAT" }}</td>
+                <td>
+                    {% if version_b.revision.user %}
+                        {{ version_b.revision.user.get_username }}
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+                <td>{{ version_b.revision.comment|default:"&mdash;" }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="module">
+        <h2>Changes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>From</th>
+                    <th>To</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field, values in changes.items %}
+                <tr>
+                    <td>{{ field }}</td>
+                    <td>{{ values.0|linebreaksbr }}</td>
+                    <td>{{ values.1|linebreaksbr }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center;">No changes found between these versions.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="submit-row">
+        <a href="{% url 'admin:config-history' %}" class="button">Back to History</a>
+        {% if can_revert %}
+            <a href="{% url 'admin:core_siteconfig_recover' version_b.pk %}" class="button deletelink" style="float: right;">
+                Revert to This Version
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -10,6 +10,14 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 - Docker containerization for development and deployment
 
 ## Recent Changes & Fixes
+- Improved API key security and handling:
+  - Added environment variable support via `.env` file
+  - Updated model to allow NULL values for API key
+  - Added API key masking in site_config.md (showing only first/last 5 chars)
+  - Added clear instructions for API key management
+- Fixed container startup issues:
+  - Resolved NOT NULL constraint error with API key
+  - Added migration to allow NULL values in anthropic_api_key field
 - Improved AI Editor UX with single editable configuration field
   - Replaced tabbed Current/Suggested Config with unified editor
   - Added Apply/Undo Changes buttons
@@ -37,14 +45,33 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 - Apply migrations: `python manage.py migrate`
 - Export site config: `python manage.py export_site_config`
 - Update site config: `python manage.py update_site_config`
-- Docker development: `docker-compose up`
+- Docker development: `docker-compose up -d`
 - Docker restart: `docker-compose restart`
+- Docker rebuild: `docker-compose down && docker-compose up -d`
 - Collect static files: `python manage.py collectstatic --noinput`
 
 ## Configuration
 - Anthropic API key can be set via:
-  1. Environment variable: ANTHROPIC_API_KEY
-  2. Database: SiteConfig model's anthropic_api_key field (requires 83+ characters)
+  1. Environment variable: ANTHROPIC_API_KEY (preferred method)
+     - Set in `.env` file at project root
+     - Automatically picked up by docker-compose and Django settings
+  2. Database: SiteConfig model's anthropic_api_key field
+     - Set in Django admin > Site Configuration
+     - Only used if environment variable isn't set
+
+## API Key Security
+- NEVER commit API keys to Git repositories
+- The `.env` file is in `.gitignore` to prevent accidental commits
+- API keys in site_config.md are masked (e.g., "sk-an...p0gAA")
+- Use environment variables in production environments
+- When viewing the site_config.md file, API keys are shown with a security note
+- API keys in Django admin are never exported in full form to markdown files
+
+## Docker Setup
+- Set environment variables in `.env` file
+- Docker reads variables from host environment or `.env` file
+- Development container uses a volume mount to enable live code editing
+- Container runs migrations and site_config updates on startup
   
 ## AI Editor Architecture
 - **Two-Step API Flow**: 
@@ -67,6 +94,8 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 - If site configuration changes aren't reflected, run `update_site_config` command
 - If About Me section isn't updating, ensure the markdown block format in site_config.md is correct
 - For JavaScript issues, check browser console for errors and ensure collectstatic has run
+- If container keeps restarting, check logs with `docker logs mickblog_dev`
+- API key issues: check both environment variable and database settings
 
 ## Coding Style
 - PEP 8 for Python code
@@ -84,3 +113,4 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 - NGINX (production)
 - Markdown/YAML for configuration
 - Vanilla JavaScript
+- Environment variables via django-environ

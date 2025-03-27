@@ -22,4 +22,6 @@ htmlcov/
 staticfiles/
 media/
 old-config-file.txt
+.env
+.env.*
 
