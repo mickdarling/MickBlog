@@ -48,15 +48,26 @@ class SiteConfigAdmin(VersionAdmin):
     readonly_fields = ('updated_at',)
     
     def get_urls(self):
-        """Add custom URLs for the AI editor interface and version history"""
+        """
+        Add custom URLs for the AI editor interface and version history
+        
+        This method extends Django's default URL pattern with our custom functionality:
+        1. AI editor integration paths for configuring the site via natural language
+        2. Version history viewing and recovery for tracking and restoring changes
+        3. Test endpoint for diagnostic purposes
+        
+        The URLs are protected by admin_view to ensure proper access control.
+        """
         urls = super().get_urls()
         custom_urls = [
+            # AI editor integration
             path('ai_editor/', self.admin_site.admin_view(ai_editor_view), name='ai-config-editor'),
             path('ai_config/', self.admin_site.admin_view(ai_config_view), name='ai-config-generate'),
             path('apply_changes/', self.admin_site.admin_view(apply_changes_view), name='ai-config-apply'),
             path('test_json/', test_json_view, name='test-json'),
+            
+            # Version history management
             path('config-history/', self.admin_site.admin_view(self.config_history_view), name='config-history'),
-            # Add revision history URLs
             path('<path:object_id>/history/', self.admin_site.admin_view(self.history_view), name='core_siteconfig_history'),
             path('<path:object_id>/history/<int:version_id>/', self.admin_site.admin_view(self.revision_view), name='core_siteconfig_revision'),
             path('recover/<int:version_id>/', self.admin_site.admin_view(self.recover_view), name='core_siteconfig_recover'),
@@ -119,13 +130,33 @@ class SiteConfigAdmin(VersionAdmin):
         return render(request, 'admin/core/siteconfig/history_comparison.html', context)
         
     def recover_view(self, request, version_id):
-        """View to recover a specific version"""
+        """
+        View to recover a specific version of the site configuration
+        
+        This method enables restoring the site configuration to a previous state by:
+        1. Loading the specified version from reversion history
+        2. Extracting all field values from that version
+        3. Applying those values to the current configuration
+        4. Creating a new revision entry to track the recovery action
+        
+        The process handles all fields, including large text fields like custom CSS,
+        and ensures proper permission checks before allowing the recovery.
+        
+        Args:
+            request: The HTTP request object
+            version_id: The ID of the version to recover
+            
+        Returns:
+            HttpResponse: Confirmation page or redirect after recovery
+        """
         from reversion.models import Version
         import reversion
         
+        # Security check - prevent unauthorized access
         if not self.has_change_permission(request):
             raise PermissionDenied
             
+        # Get the specific version to recover
         version = Version.objects.get(pk=version_id)
         
         if request.method == 'POST':

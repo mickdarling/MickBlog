@@ -1,5 +1,8 @@
 """
 Utility functions for the core app.
+
+This module provides utility functions for managing environment variables,
+particularly for secure handling of API keys without requiring server restarts.
 """
 import os
 import re
@@ -12,6 +15,13 @@ def reload_env_settings():
     
     This function is useful after updating the .env file to 
     make the new values available without restarting the server.
+    
+    It implements multiple fallback mechanisms to ensure the API key
+    is always accessible, even in containerized environments where
+    environment variables might not update properly.
+    
+    Returns:
+        bool: True if the API key was successfully loaded, False otherwise
     """
     # Initialize environ
     env = environ.Env()
@@ -54,7 +64,18 @@ def get_anthropic_api_key():
     """
     Get the Anthropic API key, with multiple fallbacks.
     
-    This ensures we have the most up-to-date API key from various sources.
+    This function implements a robust mechanism to retrieve the API key from
+    multiple possible sources, in the following order:
+    1. Django settings (already loaded in memory)
+    2. Environment variables (os.environ)
+    3. Reload from .env file (in case environment wasn't updated)
+    4. Direct read from .env file as last resort
+    
+    This approach ensures maximum reliability across different deployment
+    scenarios and prevents 500 errors when the API key is changed.
+    
+    Returns:
+        str: The Anthropic API key if found, empty string otherwise
     """
     # First check if it's already in settings
     api_key = getattr(settings, 'ANTHROPIC_API_KEY', '')

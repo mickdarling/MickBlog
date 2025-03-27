@@ -10,6 +10,7 @@ A Django-based personal website with blog, projects portfolio, resume, and conta
 - **Contact** - Contact form with security features
 - **Easy Customization** - Update content and styling through markdown templates
 - **AI-Powered Configuration** - Use the integrated AI assistant to edit site configuration
+- **Version History** - Track and restore previous configurations with detailed comparison views
 
 ## Installation
 
@@ -137,6 +138,17 @@ Access the admin panel at `/admin` to manage:
 - Projects and technologies
 - Resume sections (education, experience, skills, certifications)
 - Site configuration
+- Configuration version history
+
+### Version History
+
+The site configuration includes complete version history functionality:
+
+1. Every change to the site configuration is automatically tracked
+2. View the history of changes with user information and timestamps
+3. Compare versions with detailed side-by-side field comparison
+4. Recover previous versions with a single click
+5. Automatic handling of complex fields like custom CSS during recovery
 
 ## Security Features
 

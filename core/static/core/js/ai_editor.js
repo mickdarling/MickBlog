@@ -156,7 +156,20 @@
             return cookieValue || '';
         }
         
-        // Function to process AI request (combines chat and config)
+        /**
+         * Process AI request through the combined AI endpoint
+         * 
+         * This function handles:
+         * 1. Sending user message to the AI endpoint
+         * 2. Displaying the message in the chat interface
+         * 3. Processing the AI response with both explanation and config
+         * 4. Updating the configuration editor with changes
+         * 5. Handling various edge cases like "no changes needed"
+         * 6. Managing error states and user feedback
+         * 
+         * @param {string} message - The user message to process
+         * @param {boolean} isUserMessage - Whether this is a user-initiated message
+         */
         function processAiRequest(message, isUserMessage = true) {
             // Show loading spinner
             if (loadingSpinner) {

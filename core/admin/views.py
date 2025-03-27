@@ -150,9 +150,17 @@ def ai_config_view(request):
     """
     Combined endpoint that handles both natural language responses and config generation.
     
-    This view takes a user request message, combines it with the current site configuration,
-    and sends it to the Anthropic Claude API to generate a combined response with both
-    natural language explanation and JSON configuration.
+    This view serves as the core AI integration for the site configuration editor.
+    It uses a carefully structured prompt to ensure the AI response is consistently
+    formatted with both an explanation section and a JSON configuration section.
+    
+    Key features:
+    - Single endpoint for both natural language and configuration responses
+    - Structured output format with clear section markers for robust parsing
+    - Multiple fallback mechanisms for API key retrieval
+    - Comprehensive error handling at every step of the process
+    - Special handling for "no changes needed" cases
+    - Support for message history to maintain context
     
     Endpoint: /ai_config/
     Method: POST
@@ -171,6 +179,9 @@ def ai_config_view(request):
             "error": "Error message",
             "detail": "Additional error details"
         }
+    
+    For non-configuration requests (like "hello" or "test"), only the "reply"
+    field will be populated, and "config" will be null.
     """
     # Step 1: Get the API key with multiple fallbacks
     api_key = get_anthropic_api_key()
