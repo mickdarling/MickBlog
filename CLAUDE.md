@@ -13,6 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Version History**: If recovery fails, verify field mapping in admin_site.py recover_view
 - **Configuration**: If site changes aren't reflected, run update_site_config command
 - **Blog Content**: Posts must have "published" status to be visible
+- **AI Blog Editor**: If content doesn't appear in editor, check regex patterns in blog/views.py (ai_blog_conversation_view)
+- **AI Response Parsing**: Look for structured format with ```conversation and ```blogpost sections
 
 ## Code Style & Project Direction
 - Follow PEP 8, Django naming conventions (snake_case for variables/functions, CamelCase for classes)
@@ -33,5 +35,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Nginx for production serving with HTTPS
 - Environment variables via django-environ
 - Version control via django-reversion 
+- AI integration via Anthropic Claude API
+- Two complementary AI blog content creation tools:
+  1. **AI Blog Editor (Conversational)**: Two-panel interface with chat and editor
+  2. **AI-AutoCreate (Form-based)**: Structured form for guided content generation
+
+## AI Response Structure
+When working with the AI blog content creation tools, responses are structured with specific markers:
+
+```
+```conversation
+This is the conversational part that appears in the chat panel
+```
+
+```blogpost
+This is the blog content that appears in the editor panel
+```
+```
+
+This structure allows for clean separation of conversation from content.
 
 For detailed documentation on architecture, troubleshooting, and known issues, see [REFERENCE.md](./REFERENCE.md)
