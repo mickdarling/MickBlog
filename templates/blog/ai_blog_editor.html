@@ -1,0 +1,1084 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .ai-blog-editor-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .chat-container {
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      min-height: 400px;
+      max-height: 70vh;
+      overflow-y: auto;
+      padding: 15px;
+      background-color: #f5f5f5;
+    }
+    
+    .message {
+      margin-bottom: 15px;
+      padding: 10px 15px;
+      border-radius: 5px;
+      max-width: 85%;
+      word-break: break-word;
+    }
+    
+    .message.user {
+      background-color: #007bff;
+      color: white;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    
+    .message.ai {
+      background-color: #e9ecef;
+      color: #212529;
+      align-self: flex-start;
+    }
+    
+    .message.system {
+      background-color: #ffc107;
+      color: #212529;
+      width: 100%;
+      max-width: 100%;
+      text-align: center;
+      font-style: italic;
+    }
+    
+    .chat-input {
+      display: flex;
+      padding: 10px;
+      background-color: #fff;
+      border-top: 1px solid #ddd;
+    }
+    
+    .chat-input textarea {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 60px;
+      resize: vertical;
+    }
+    
+    .chat-input button {
+      padding: 0 20px;
+      margin-left: 10px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .editor-container {
+      flex: 2;
+      min-width: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .editor-tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .editor-tab {
+      padding: 10px 15px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: 5px 5px 0 0;
+      background-color: #f8f9fa;
+      margin-right: 5px;
+    }
+    
+    .editor-tab.active {
+      background-color: #fff;
+      border-color: #ddd;
+      border-bottom-color: #fff;
+      z-index: 1;
+      margin-bottom: -1px;
+    }
+    
+    .editor-content {
+      flex: 1;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+    
+    .editor-textarea {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      resize: vertical;
+    }
+    
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    
+    .button-group button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .button-group button.primary {
+      background-color: #007bff;
+      color: white;
+    }
+    
+    .button-group button.secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+    
+    .button-group button.success {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .loading-spinner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .preview-container {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+      background-color: #fff;
+    }
+    
+    .preview-container h2 {
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    
+    .diff-highlight {
+      background-color: #ffffcc;
+    }
+    
+    .blog-metadata {
+      margin-bottom: 20px;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border-left: 4px solid #007bff;
+    }
+    
+    .blog-metadata h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #495057;
+    }
+    
+    .metadata-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .metadata-form .field {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .metadata-form label {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .metadata-form select,
+    .metadata-form input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='blog' %}">Blog</a>
+  &rsaquo; AI Blog Editor
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned">
+  <h1>AI Blog Editor</h1>
+  
+  {% if not api_key_configured %}
+    <div class="errornote">
+      <h3>API Key Not Configured</h3>
+      <p>The Anthropic API key is required for AI-powered blog editing.</p>
+      <p>To set up your API key:</p>
+      <ol>
+        <li>Go to the <a href="/admin/api-key-setup/">API Key Setup page</a></li>
+        <li>Enter your Anthropic API key in the form</li>
+        <li>Save the key to enable AI-powered editing</li>
+      </ol>
+      <a href="/admin/api-key-setup/" class="button" style="background-color: #28a745;">
+        Configure API Key
+      </a>
+    </div>
+  {% else %}
+  
+  <div class="ai-blog-editor-container">
+    <!-- Chat container -->
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="message ai">
+          <p>Hello! I'm your AI blog post assistant. Tell me what you'd like to write about, and I'll help you create a fantastic blog post. You can ask for specific changes, suggestions, or guidance at any point.</p>
+        </div>
+      </div>
+      
+      <div class="chat-input">
+        <textarea id="userInput" placeholder="Describe your blog post idea or ask for help..."></textarea>
+        <button id="sendButton">Send</button>
+      </div>
+    </div>
+    
+    <!-- Editor container -->
+    <div class="editor-container">
+      <!-- Blog post metadata -->
+      <div class="blog-metadata">
+        <h3>Blog Post Details</h3>
+        <div class="metadata-form">
+          <div class="field">
+            <label for="postTitle">Title</label>
+            <input type="text" id="postTitle" name="title" placeholder="Enter blog post title">
+          </div>
+          
+          <div class="field">
+            <label for="postCategory">Category</label>
+            <select id="postCategory" name="category">
+              <option value="">-- Select Category --</option>
+              {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="field">
+            <label for="postAuthor">Author</label>
+            <select id="postAuthor" name="author">
+              {% for author in authors %}
+                <option value="{{ author.id }}">{{ author.get_full_name|default:author.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="field">
+            <label for="postStatus">Status</label>
+            <select id="postStatus" name="status">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Editor tabs -->
+      <div class="editor-tabs">
+        <div class="editor-tab active" data-tab="editor">Editor</div>
+        <div class="editor-tab" data-tab="preview">Preview</div>
+      </div>
+      
+      <!-- Editor content -->
+      <div class="editor-content">
+        <div class="tab-content active" id="editorTab">
+          <textarea id="postContent" class="editor-textarea" placeholder="Your blog post content in markdown format..."></textarea>
+        </div>
+        
+        <div class="tab-content" id="previewTab" style="display: none;">
+          <div id="previewContent" class="preview-content"></div>
+        </div>
+      </div>
+      
+      <!-- Button group -->
+      <div class="button-group">
+        <div>
+          <button id="previewButton" class="secondary">Refresh Preview</button>
+          <button id="suggestImprovements" class="secondary">Suggest Improvements</button>
+        </div>
+        <div>
+          <button id="saveButton" class="success">Save Post</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Hidden form for saving -->
+  <form id="saveForm" method="post" action="{% url 'blog:save_ai_blog' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="title" id="formTitle">
+    <input type="hidden" name="content" id="formContent">
+    <input type="hidden" name="author" id="formAuthor">
+    <input type="hidden" name="category" id="formCategory">
+    <input type="hidden" name="status" id="formStatus">
+  </form>
+  
+  <!-- Loading spinner -->
+  <div id="loadingSpinner" class="loading-spinner">
+    <div class="spinner"></div>
+    <p id="loadingMessage">Processing your request...</p>
+  </div>
+  
+  <script>
+    /**
+     * AI Blog Editor JavaScript
+     * 
+     * This script powers the interactive AI-assisted blog post editor.
+     * Key features:
+     * - Real-time conversation with AI to generate and refine content
+     * - Dynamic content updates in the editor from AI suggestions
+     * - Preview rendering of markdown content
+     * - Content improvement suggestions with diff view
+     * - Side-by-side difference comparisons
+     * - Toggle previews of improvements
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM elements
+      const chatMessages = document.getElementById('chatMessages');
+      const userInput = document.getElementById('userInput');
+      const sendButton = document.getElementById('sendButton');
+      const postContent = document.getElementById('postContent');
+      const postTitle = document.getElementById('postTitle');
+      const postCategory = document.getElementById('postCategory');
+      const postAuthor = document.getElementById('postAuthor');
+      const postStatus = document.getElementById('postStatus');
+      const previewButton = document.getElementById('previewButton');
+      const previewContent = document.getElementById('previewContent');
+      const saveButton = document.getElementById('saveButton');
+      const loadingSpinner = document.getElementById('loadingSpinner');
+      const loadingMessage = document.getElementById('loadingMessage');
+      const suggestImprovements = document.getElementById('suggestImprovements');
+      
+      // Tab navigation
+      const tabs = document.querySelectorAll('.editor-tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          // Remove active class from all tabs
+          tabs.forEach(t => t.classList.remove('active'));
+          
+          // Add active class to clicked tab
+          this.classList.add('active');
+          
+          // Hide all tab contents
+          tabContents.forEach(content => content.style.display = 'none');
+          
+          // Show selected tab content
+          const tabName = this.getAttribute('data-tab');
+          document.getElementById(tabName + 'Tab').style.display = 'block';
+          
+          // If preview tab is selected, update the preview
+          if (tabName === 'preview') {
+            updatePreview();
+          }
+        });
+      });
+      
+      // CSRF token function
+      function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+      }
+      
+      // Add message to chat
+      function addMessage(content, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `<p>${content}</p>`;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      
+      /**
+       * Renders the markdown content as HTML in the preview tab
+       * 
+       * This function:
+       * 1. Shows a loading spinner while processing
+       * 2. Sends the current editor content to the server for markdown rendering
+       * 3. Updates the preview pane with the rendered HTML
+       * 4. Includes the current title in the preview
+       */
+      function updatePreview() {
+        loadingSpinner.style.display = 'flex';
+        loadingMessage.textContent = 'Generating preview...';
+        
+        fetch('{% url "blog:markdown_preview" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            content: postContent.value
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          previewContent.innerHTML = `
+            <h1>${postTitle.value || 'Untitled Post'}</h1>
+            ${data.html}
+          `;
+          loadingSpinner.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error generating preview:', error);
+          loadingSpinner.style.display = 'none';
+          alert('Error generating preview. Please try again.');
+        });
+      }
+      
+      /**
+       * Handles user message submission to the AI
+       * 
+       * This function:
+       * 1. Sends the user's message to the AI along with the current blog state
+       * 2. Shows a loading spinner during processing
+       * 3. Adds the AI's response to the chat window
+       * 4. Updates the editor content with the AI's blog post
+       * 5. Updates the title field if a title is suggested
+       * 6. Attempts to detect and set the category from content
+       * 
+       * The AI returns two sections:
+       * - A conversational response shown in the chat
+       * - A complete blog post that updates the editor
+       */
+      function handleUserMessage() {
+        const message = userInput.value.trim();
+        
+        if (!message) {
+          return;
+        }
+        
+        // Add user message to chat
+        addMessage(message, 'user');
+        
+        // Clear input
+        userInput.value = '';
+        
+        // Show loading spinner
+        loadingSpinner.style.display = 'flex';
+        loadingMessage.textContent = 'AI is thinking...';
+        
+        // Get current content and metadata
+        const title = postTitle.value;
+        const content = postContent.value;
+        const category = postCategory.options[postCategory.selectedIndex]?.text || '';
+        
+        // Send request to AI
+        fetch('{% url "blog:ai_blog_conversation" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            message: message,
+            title: title,
+            content: content,
+            category: category
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Hide loading spinner
+          loadingSpinner.style.display = 'none';
+          
+          if (data.error) {
+            // Handle error
+            addMessage(`Error: ${data.error}`, 'system');
+            return;
+          }
+          
+          // Add AI response to chat
+          addMessage(data.reply, 'ai');
+          
+          // Update content if provided
+          if (data.content) {
+            console.log("Updating content with new content:", data.content.substring(0, 100) + "...");
+            
+            // Store the previous content for comparison
+            const previousContent = postContent.value;
+            const isFirstContent = !previousContent.trim();
+            
+            // Update the editor with the new content
+            postContent.value = data.content;
+            
+            // Add an appropriate system message based on whether this is the first content or an update
+            if (isFirstContent) {
+              addMessage("✨ Blog post created in the editor! You can now edit or refine it.", "system");
+              
+              // Add a hint for how to preview
+              setTimeout(() => {
+                addMessage("Tip: Click the 'Preview' tab to see how your post will look when published.", "system");
+              }, 1500);
+            } else {
+              addMessage("📝 Blog post updated in the editor", "system");
+              
+              // Offer to show what changed
+              const diffMsg = document.createElement('div');
+              diffMsg.className = 'message system';
+              diffMsg.innerHTML = `<p><a href="#" id="showDiff" style="color: #0275d8; text-decoration: underline;">Show what changed</a></p>`;
+              chatMessages.appendChild(diffMsg);
+              
+              // Add event listener to show changes
+              document.getElementById('showDiff').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Show differences between previous and current
+                const previousLines = previousContent.split("\n");
+                const currentLines = data.content.split("\n");
+                
+                // Create a simple diff view
+                let diffHTML = '<div style="font-family: monospace; white-space: pre-wrap; line-height: 1.4;">';
+                
+                // Find the max length
+                const maxLength = Math.max(previousLines.length, currentLines.length);
+                
+                for (let i = 0; i < maxLength; i++) {
+                  const previousLine = i < previousLines.length ? previousLines[i] : '';
+                  const currentLine = i < currentLines.length ? currentLines[i] : '';
+                  
+                  if (previousLine !== currentLine) {
+                    // Lines are different
+                    if (previousLine) {
+                      diffHTML += `<div style="background-color: #ffdddd; text-decoration: line-through;">${previousLine}</div>`;
+                    }
+                    if (currentLine) {
+                      diffHTML += `<div style="background-color: #ddffdd;">${currentLine}</div>`;
+                    }
+                  } else {
+                    // Lines are the same
+                    diffHTML += `<div>${currentLine}</div>`;
+                  }
+                }
+                
+                diffHTML += '</div>';
+                
+                // Show the diff in a special message
+                const diffDetailMsg = document.createElement('div');
+                diffDetailMsg.className = 'message system';
+                diffDetailMsg.innerHTML = `
+                  <p><strong>Changes Made:</strong></p>
+                  <div style="max-height: 300px; overflow-y: auto; margin: 10px 0; border: 1px solid #ddd; padding: 10px;">
+                    ${diffHTML}
+                  </div>
+                  <p>Red = removed, Green = added</p>
+                `;
+                chatMessages.appendChild(diffDetailMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Remove the "Show what changed" link
+                diffMsg.style.display = 'none';
+              });
+            }
+            
+            // We'll no longer auto-switch to the preview tab to avoid confusion with preview timeouts
+          }
+          
+          // Update title if provided
+          if (data.title) {
+            console.log("Updating title to:", data.title);
+            // Always update if empty or if overwrite flag is set
+            if (!postTitle.value || data.overwrite_title) {
+              postTitle.value = data.title;
+              addMessage(`Title has been set to: "${data.title}"`, "system");
+            } else {
+              // Suggest the title but don't automatically change it
+              addMessage(`Suggested title: "${data.title}" (click to use)`, "system");
+              
+              // Make the message clickable to update the title
+              const messages = chatMessages.querySelectorAll('.message.system');
+              const lastMessage = messages[messages.length - 1];
+              lastMessage.style.cursor = 'pointer';
+              lastMessage.addEventListener('click', function() {
+                postTitle.value = data.title;
+                this.innerHTML = `<p>Title has been updated to: "${data.title}"</p>`;
+                this.style.backgroundColor = '#28a745';
+                this.style.color = 'white';
+              });
+            }
+          }
+          
+          // If category is empty, try to extract from content
+          if (!postCategory.value && category === '') {
+            // Look for category indicators in the content
+            const categoryNames = Array.from(postCategory.options).map(opt => opt.text.toLowerCase());
+            
+            // Skip the first "Select Category" option
+            categoryNames.shift();
+            
+            // Check if any category name is mentioned in the content or response
+            const contentToCheck = (data.content || '') + ' ' + data.reply.toLowerCase();
+            
+            for (let i = 0; i < categoryNames.length; i++) {
+              if (contentToCheck.toLowerCase().includes(categoryNames[i])) {
+                // Found a category match
+                const categoryOption = Array.from(postCategory.options).find(
+                  opt => opt.text.toLowerCase() === categoryNames[i]
+                );
+                
+                if (categoryOption) {
+                  postCategory.value = categoryOption.value;
+                  addMessage(`Category set to: ${categoryOption.text}`, "system");
+                  break;
+                }
+              }
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          loadingSpinner.style.display = 'none';
+          addMessage('An error occurred while communicating with the AI. Please try again.', 'system');
+        });
+      }
+      
+      /**
+       * Requests and handles AI improvement suggestions for the current content
+       * 
+       * This function provides an advanced content improvement workflow:
+       * 1. Sends the current content to the AI for analysis
+       * 2. Displays the AI's improvement suggestions in the chat
+       * 3. Offers three options for reviewing the improvements:
+       *    - Apply Changes: Updates the editor with improved content
+       *    - Preview Changes: Toggle between original and improved versions
+       *    - Show Differences: Side-by-side comparison with highlighted changes
+       * 
+       * Each option has its own interactive UI for clear user feedback
+       */
+      function suggestPostImprovements() {
+        const content = postContent.value.trim();
+        
+        if (!content) {
+          alert('Please write some content first before requesting improvements.');
+          return;
+        }
+        
+        // Add message to chat
+        addMessage('Can you suggest improvements for this content?', 'user');
+        
+        // Show loading spinner
+        loadingSpinner.style.display = 'flex';
+        loadingMessage.textContent = 'Analyzing your content...';
+        
+        // Send request to AI
+        fetch('{% url "blog:ai_blog_improve" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            content: content,
+            title: postTitle.value
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Hide loading spinner
+          loadingSpinner.style.display = 'none';
+          
+          if (data.error) {
+            // Handle error
+            addMessage(`Error: ${data.error}`, 'system');
+            return;
+          }
+          
+          // Add AI response to chat
+          addMessage(data.suggestions, 'ai');
+          
+          // Update content if provided
+          if (data.improved_content) {
+            // Create a special system message with buttons
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.innerHTML = `
+              <p>The AI has suggested improvements to your content.</p>
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="apply-btn" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Apply Changes</button>
+                <button class="preview-btn" style="background-color: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Preview Changes</button>
+                <button class="diff-btn" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Show Differences</button>
+              </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Add event listeners to buttons
+            messageDiv.querySelector('.apply-btn').addEventListener('click', function() {
+              postContent.value = data.improved_content;
+              this.parentNode.innerHTML = '<p>✅ Improvements applied to the editor</p>';
+              this.parentNode.parentNode.style.backgroundColor = '#28a745';
+              this.parentNode.parentNode.style.color = 'white';
+            });
+            
+            messageDiv.querySelector('.preview-btn').addEventListener('click', function() {
+              // Store the original content
+              const originalContent = postContent.value;
+              let isShowingImproved = false;
+              let previewBanner = null;
+              
+              // Create a toggle banner with buttons
+              previewBanner = document.createElement('div');
+              previewBanner.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background-color: #17a2b8; color: white; padding: 10px; text-align: center; z-index: 9999; display: flex; justify-content: center; align-items: center; gap: 20px;';
+              previewBanner.innerHTML = `
+                <div style="font-weight: bold;">PREVIEW MODE: <span id="previewStatus">Original Content</span></div>
+                <div>
+                  <button id="togglePreviewBtn" style="background-color: white; color: #17a2b8; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Show Improved</button>
+                  <button id="applyPreviewBtn" style="background-color: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Apply Improved</button>
+                  <button id="exitPreviewBtn" style="background-color: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Exit Preview</button>
+                </div>
+              `;
+              document.body.appendChild(previewBanner);
+              
+              // Add a system message
+              const tempMsg = document.createElement('div');
+              tempMsg.className = 'message system';
+              tempMsg.innerHTML = `
+                <p><strong>Preview Mode Active</strong></p>
+                <p>Use the toggle button in the banner to switch between original and improved content.</p>
+              `;
+              chatMessages.appendChild(tempMsg);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+              
+              // Show preview tab to see the content
+              document.querySelector('.editor-tab[data-tab="preview"]').click();
+              
+              // Toggle function
+              function togglePreview() {
+                isShowingImproved = !isShowingImproved;
+                
+                if (isShowingImproved) {
+                  postContent.value = data.improved_content;
+                  document.getElementById('previewStatus').textContent = 'Improved Content';
+                  document.getElementById('togglePreviewBtn').textContent = 'Show Original';
+                } else {
+                  postContent.value = originalContent;
+                  document.getElementById('previewStatus').textContent = 'Original Content';
+                  document.getElementById('togglePreviewBtn').textContent = 'Show Improved';
+                }
+                
+                // Refresh the preview if in preview tab
+                if (document.querySelector('.editor-tab[data-tab="preview"]').classList.contains('active')) {
+                  updatePreview();
+                }
+              }
+              
+              // Set up event listeners for the banner buttons
+              document.getElementById('togglePreviewBtn').addEventListener('click', togglePreview);
+              
+              document.getElementById('applyPreviewBtn').addEventListener('click', function() {
+                // Apply the improved content permanently
+                postContent.value = data.improved_content;
+                
+                // Update the message
+                tempMsg.innerHTML = '<p>✅ Improvements applied to the editor</p>';
+                tempMsg.style.backgroundColor = '#28a745';
+                tempMsg.style.color = 'white';
+                
+                // Remove the banner
+                document.body.removeChild(previewBanner);
+                
+                // Update the original message
+                messageDiv.innerHTML = '<p>✅ Improvements have been applied to the editor</p>';
+                messageDiv.style.backgroundColor = '#28a745';
+                messageDiv.style.color = 'white';
+              });
+              
+              document.getElementById('exitPreviewBtn').addEventListener('click', function() {
+                // Restore original content
+                postContent.value = originalContent;
+                
+                // Switch back to editor tab
+                document.querySelector('.editor-tab[data-tab="editor"]').click();
+                
+                // Update the message
+                tempMsg.innerHTML = '<p>Preview mode exited. Original content restored.</p>';
+                
+                // Remove the banner
+                document.body.removeChild(previewBanner);
+              });
+              
+              // Initial toggle to show improved content
+              togglePreview();
+            });
+            
+            messageDiv.querySelector('.diff-btn').addEventListener('click', function() {
+              // Store the original content and editor tab state
+              const originalContent = postContent.value;
+              const wasInPreviewTab = document.querySelector('.editor-tab[data-tab="preview"]').classList.contains('active');
+              
+              // First, ensure we're on the editor tab
+              document.querySelector('.editor-tab[data-tab="editor"]').click();
+              
+              // Create a diff view container in the editor area
+              const editorContainer = document.querySelector('.editor-content');
+              const originalEditorTab = document.getElementById('editorTab');
+              const previewTab = document.getElementById('previewTab');
+              
+              // Create and add the diff tab if it doesn't exist
+              let diffTab = document.getElementById('diffTab');
+              if (!diffTab) {
+                diffTab = document.createElement('div');
+                diffTab.id = 'diffTab';
+                diffTab.className = 'tab-content';
+                diffTab.style.display = 'none';
+                editorContainer.appendChild(diffTab);
+                
+                // Also add the diff tab button
+                const tabsContainer = document.querySelector('.editor-tabs');
+                const diffTabBtn = document.createElement('div');
+                diffTabBtn.className = 'editor-tab';
+                diffTabBtn.setAttribute('data-tab', 'diff');
+                diffTabBtn.textContent = 'Diff View';
+                diffTabBtn.addEventListener('click', function() {
+                  // Remove active class from all tabs
+                  document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+                  
+                  // Add active class to this tab
+                  this.classList.add('active');
+                  
+                  // Hide all tab contents
+                  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                  
+                  // Show diff tab content
+                  document.getElementById('diffTab').style.display = 'block';
+                });
+                tabsContainer.appendChild(diffTabBtn);
+              }
+              
+              // Show differences between original and improved
+              const originalLines = originalContent.split("\n");
+              const improvedLines = data.improved_content.split("\n");
+              
+              // Create a side-by-side diff view
+              let diffHTML = `
+                <div style="display: flex; height: 100%; border: 1px solid #ddd; border-radius: 4px; overflow: hidden;">
+                  <div style="flex: 1; padding: 10px; border-right: 1px solid #ddd; overflow: auto; max-height: 500px;">
+                    <h3 style="position: sticky; top: 0; background: white; padding: 5px 0; margin-top: 0;">Original</h3>
+                    <div style="font-family: monospace; white-space: pre-wrap; line-height: 1.4;">
+              `;
+              
+              // Add original content with highlighted changes
+              for (let i = 0; i < originalLines.length; i++) {
+                const line = originalLines[i];
+                const improvedLine = i < improvedLines.length ? improvedLines[i] : '';
+                
+                if (line !== improvedLine) {
+                  // Line is different
+                  diffHTML += `<div style="background-color: #ffdddd;">${line}</div>`;
+                } else {
+                  // Line is the same
+                  diffHTML += `<div>${line}</div>`;
+                }
+              }
+              
+              diffHTML += `
+                    </div>
+                  </div>
+                  <div style="flex: 1; padding: 10px; overflow: auto; max-height: 500px;">
+                    <h3 style="position: sticky; top: 0; background: white; padding: 5px 0; margin-top: 0;">Improved</h3>
+                    <div style="font-family: monospace; white-space: pre-wrap; line-height: 1.4;">
+              `;
+              
+              // Add improved content with highlighted changes
+              for (let i = 0; i < improvedLines.length; i++) {
+                const line = improvedLines[i];
+                const originalLine = i < originalLines.length ? originalLines[i] : '';
+                
+                if (line !== originalLine) {
+                  // Line is different
+                  diffHTML += `<div style="background-color: #ddffdd;">${line}</div>`;
+                } else {
+                  // Line is the same
+                  diffHTML += `<div>${line}</div>`;
+                }
+              }
+              
+              diffHTML += `
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                  <button id="applyDiffChanges" style="background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Apply Improved Version</button>
+                  <button id="closeDiffView" style="background-color: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Return to Editor</button>
+                </div>
+              `;
+              
+              // Set the diff content and show the diff tab
+              diffTab.innerHTML = diffHTML;
+              
+              // Hide editor and preview tabs, show diff tab
+              originalEditorTab.style.display = 'none';
+              previewTab.style.display = 'none';
+              diffTab.style.display = 'block';
+              
+              // Update the tabs to show diff tab as active
+              document.querySelectorAll('.editor-tab').forEach(tab => tab.classList.remove('active'));
+              document.querySelector('.editor-tab[data-tab="diff"]').classList.add('active');
+              
+              // Add event listeners for the diff view buttons
+              document.getElementById('applyDiffChanges').addEventListener('click', function() {
+                // Apply the improved content
+                postContent.value = data.improved_content;
+                
+                // Hide the diff view and return to editor
+                diffTab.style.display = 'none';
+                originalEditorTab.style.display = 'block';
+                
+                // Update the tab buttons
+                document.querySelectorAll('.editor-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelector('.editor-tab[data-tab="editor"]').classList.add('active');
+                
+                // Update the system message
+                messageDiv.innerHTML = '<p>✅ Improvements have been applied to the editor</p>';
+                messageDiv.style.backgroundColor = '#28a745';
+                messageDiv.style.color = 'white';
+                
+                // Add a confirmation message
+                const confirmMsg = document.createElement('div');
+                confirmMsg.className = 'message system';
+                confirmMsg.innerHTML = '<p>Changes have been applied to the editor.</p>';
+                confirmMsg.style.backgroundColor = '#28a745';
+                confirmMsg.style.color = 'white';
+                chatMessages.appendChild(confirmMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              });
+              
+              document.getElementById('closeDiffView').addEventListener('click', function() {
+                // Hide the diff view and return to editor
+                diffTab.style.display = 'none';
+                originalEditorTab.style.display = 'block';
+                
+                // Update the tab buttons
+                document.querySelectorAll('.editor-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelector('.editor-tab[data-tab="editor"]').classList.add('active');
+                
+                // If user was in preview tab before, return there
+                if (wasInPreviewTab) {
+                  setTimeout(() => {
+                    document.querySelector('.editor-tab[data-tab="preview"]').click();
+                  }, 10);
+                }
+              });
+              
+              // Add a system message
+              addMessage(`Diff view opened in the editor. Red = original text, Green = improved text.`, 'system');
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          loadingSpinner.style.display = 'none';
+          addMessage('An error occurred while analyzing your content. Please try again.', 'system');
+        });
+      }
+      
+      // Save post
+      function savePost() {
+        const title = postTitle.value.trim();
+        const content = postContent.value.trim();
+        const author = postAuthor.value;
+        const category = postCategory.value;
+        const status = postStatus.value;
+        
+        if (!title) {
+          alert('Please enter a title for your blog post.');
+          return;
+        }
+        
+        if (!content) {
+          alert('Please enter content for your blog post.');
+          return;
+        }
+        
+        if (!author) {
+          alert('Please select an author for your blog post.');
+          return;
+        }
+        
+        // Set form values
+        document.getElementById('formTitle').value = title;
+        document.getElementById('formContent').value = content;
+        document.getElementById('formAuthor').value = author;
+        document.getElementById('formCategory').value = category;
+        document.getElementById('formStatus').value = status;
+        
+        // Submit the form
+        document.getElementById('saveForm').submit();
+      }
+      
+      // Event listeners
+      sendButton.addEventListener('click', handleUserMessage);
+      
+      userInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          handleUserMessage();
+        }
+      });
+      
+      previewButton.addEventListener('click', updatePreview);
+      suggestImprovements.addEventListener('click', suggestPostImprovements);
+      saveButton.addEventListener('click', savePost);
+    });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

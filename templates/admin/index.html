@@ -8,12 +8,30 @@
     <h2 style="margin-top: 0;">Quick Links</h2>
     <ul>
         <li><a href="{% url 'admin:core_siteconfig_change' 1 %}">Edit Site Configuration</a></li>
-        <li><a href="{% url 'admin:ai-config-editor' %}">AI Editor</a></li>
+        <li><a href="{% url 'admin:ai-config-editor' %}">AI Site Editor</a></li>
+        <li><a href="{% url 'admin:blog_ai_editor' %}" style="color: #0275d8; font-weight: bold;">AI Blog Editor (Conversational)</a></li>
+        <li><a href="{% url 'admin:blog_ai_post_generator' %}">AI-AutoCreate (Form-based)</a></li>
         <li>
             <a href="/admin/api-key-setup/" style="color: #28a745; font-weight: bold;">
                 Set Anthropic API Key
             </a>
         </li>
     </ul>
+</div>
+
+<!-- AI Tools Section -->
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
+    <h2 style="margin-top: 0;">AI Tools</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px;">
+        <a href="{% url 'admin:blog_ai_post_generator' %}" style="flex: 1; min-width: 200px; text-decoration: none; color: inherit; padding: 15px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #007bff;">Blog Post Generator</h3>
+            <p>Create AI-generated blog posts with customizable parameters</p>
+        </a>
+        
+        <a href="{% url 'admin:ai-config-editor' %}" style="flex: 1; min-width: 200px; text-decoration: none; color: inherit; padding: 15px; background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #007bff;">Site Configuration Editor</h3>
+            <p>Update site settings with AI assistance</p>
+        </a>
+    </div>
 </div>
 {% endblock %}

@@ -1,0 +1,337 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <!-- Add custom CSS for the AI post generator -->
+  <style>
+    .ai-post-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .form-section {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .preview-section {
+      flex: 2;
+      min-width: 500px;
+    }
+    
+    .preview-content {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    .loading-spinner {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='blog' %}">Blog</a>
+  &rsaquo; AI Blog Post Generator
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned">
+  <h1>AI Blog Post Generator</h1>
+  
+  {% if not api_key_configured %}
+    <div class="errornote">
+      <h3>API Key Not Configured</h3>
+      <p>The Anthropic API key is required for AI-powered post generation.</p>
+      <p>To set up your API key:</p>
+      <ol>
+        <li>Go to the <a href="/admin/api-key-setup/">API Key Setup page</a></li>
+        <li>Enter your Anthropic API key in the form</li>
+        <li>Save the key to enable AI-powered editing</li>
+      </ol>
+      <a href="/admin/api-key-setup/" class="button" style="background-color: #28a745;">
+        Configure API Key
+      </a>
+    </div>
+  {% else %}
+  
+  <div class="ai-post-container">
+    <div class="form-section">
+      <form method="post" id="aiPostForm">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+          <h2>Post Details</h2>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.title.id_for_label }}">{{ form.title.label }}:</label>
+              {{ form.title }}
+              {% if form.title.help_text %}
+                <div class="help">{{ form.title.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.topic.id_for_label }}">{{ form.topic.label }}:</label>
+              {{ form.topic }}
+              {% if form.topic.help_text %}
+                <div class="help">{{ form.topic.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.category.id_for_label }}">{{ form.category.label }}:</label>
+              {{ form.category }}
+              {% if form.category.help_text %}
+                <div class="help">{{ form.category.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.length.id_for_label }}">{{ form.length.label }}:</label>
+              {{ form.length }}
+              {% if form.length.help_text %}
+                <div class="help">{{ form.length.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.tone.id_for_label }}">{{ form.tone.label }}:</label>
+              {{ form.tone }}
+              {% if form.tone.help_text %}
+                <div class="help">{{ form.tone.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.keywords.id_for_label }}">{{ form.keywords.label }}:</label>
+              {{ form.keywords }}
+              {% if form.keywords.help_text %}
+                <div class="help">{{ form.keywords.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.author.id_for_label }}">{{ form.author.label }}:</label>
+              {{ form.author }}
+              {% if form.author.help_text %}
+                <div class="help">{{ form.author.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="field-box">
+              <label for="{{ form.publish_directly.id_for_label }}" class="checkbox-row">
+                {{ form.publish_directly }}
+                {{ form.publish_directly.label }}
+              </label>
+              {% if form.publish_directly.help_text %}
+                <div class="help">{{ form.publish_directly.help_text }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </fieldset>
+        
+        <div class="submit-row">
+          <input type="button" id="generateButton" value="Generate Post" class="default" name="_generate">
+          <input type="submit" id="saveButton" value="Save Post" class="default" name="_save" disabled>
+        </div>
+      </form>
+    </div>
+    
+    <div class="preview-section">
+      <h2>Generated Content Preview</h2>
+      <div class="preview-content" id="previewContent">
+        <p class="help text-center">Generated content will appear here</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Spinner for loading state -->
+  <div id="loadingSpinner" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Generating blog post content...</p>
+  </div>
+  
+  <script>
+    // Initialize variables to store generated content
+    let generatedTitle = "";
+    let generatedContent = "";
+    let generatedSlug = "";
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const generateButton = document.getElementById('generateButton');
+      const saveButton = document.getElementById('saveButton');
+      const previewContent = document.getElementById('previewContent');
+      const loadingSpinner = document.getElementById('loadingSpinner');
+      const aiPostForm = document.getElementById('aiPostForm');
+      
+      // Function to get CSRF token
+      function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+      }
+      
+      // Generate post with AI
+      generateButton.addEventListener('click', function() {
+        // Get form values
+        const topic = document.getElementById('{{ form.topic.id_for_label }}').value.trim();
+        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
+        const category = document.getElementById('{{ form.category.id_for_label }}').value;
+        const length = document.getElementById('{{ form.length.id_for_label }}').value;
+        const tone = document.getElementById('{{ form.tone.id_for_label }}').value;
+        const keywords = document.getElementById('{{ form.keywords.id_for_label }}').value.trim();
+        
+        // Validate required fields
+        if (!topic) {
+          alert('Please enter a topic for the blog post');
+          return;
+        }
+        
+        // Show loading spinner
+        loadingSpinner.style.display = 'flex';
+        
+        // Make API request
+        fetch('/blog/generate_ai_post/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            topic: topic,
+            title: title,
+            category: category,
+            length: length,
+            tone: tone,
+            keywords: keywords
+          })
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Hide loading spinner
+          loadingSpinner.style.display = 'none';
+          
+          if (data.error) {
+            // Handle error
+            previewContent.innerHTML = `<div class="errornote">${data.error}</div>`;
+            saveButton.disabled = true;
+          } else {
+            // Store generated content
+            generatedTitle = data.title;
+            generatedContent = data.content;
+            generatedSlug = data.slug;
+            
+            // Update title field if it was empty
+            if (!title) {
+              document.getElementById('{{ form.title.id_for_label }}').value = generatedTitle;
+            }
+            
+            // Display preview with formatted content
+            previewContent.innerHTML = `
+              <h3>${data.title}</h3>
+              <hr>
+              ${data.content_html}
+            `;
+            
+            // Enable save button
+            saveButton.disabled = false;
+          }
+        })
+        .catch(error => {
+          // Hide loading spinner
+          loadingSpinner.style.display = 'none';
+          
+          // Display error
+          previewContent.innerHTML = `
+            <div class="errornote">
+              <p>Error generating content: ${error.message}</p>
+              <p>Please try again or contact the administrator.</p>
+            </div>
+          `;
+        });
+      });
+      
+      // Handle form submission
+      aiPostForm.addEventListener('submit', function(e) {
+        // Only if we have generated content
+        if (!generatedContent) {
+          e.preventDefault();
+          alert('Please generate content before saving');
+        } else {
+          // Add hidden fields for the generated content
+          const hiddenTitle = document.createElement('input');
+          hiddenTitle.type = 'hidden';
+          hiddenTitle.name = 'generated_title';
+          hiddenTitle.value = generatedTitle;
+          aiPostForm.appendChild(hiddenTitle);
+          
+          const hiddenContent = document.createElement('input');
+          hiddenContent.type = 'hidden';
+          hiddenContent.name = 'generated_content';
+          hiddenContent.value = generatedContent;
+          aiPostForm.appendChild(hiddenContent);
+          
+          const hiddenSlug = document.createElement('input');
+          hiddenSlug.type = 'hidden';
+          hiddenSlug.name = 'generated_slug';
+          hiddenSlug.value = generatedSlug;
+          aiPostForm.appendChild(hiddenSlug);
+        }
+      });
+    });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}
