@@ -184,6 +184,17 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
     - Structured AI requests to separate conversation from blog content generation
     - Pattern matching with regex to extract content sections 
     - Preview toggle system for comparing versions
+  - **AI Response Structure**:
+    ```
+    ```conversation
+    This is the conversational part that appears in the chat panel
+    ```
+    
+    ```blogpost
+    This is the blog content that appears in the editor panel
+    ```
+    ```
+    This structure allows for clean separation of conversation from content
   - **URL Endpoints**:
     - `/ai_blog_editor/` - Main editor interface
     - `/ai_blog_conversation/` - Handles conversation with AI for blog content
@@ -211,6 +222,13 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
     - Save options for draft or published posts
 
 ## Troubleshooting
+
+### Common Issues & Quick Solutions
+- **API Keys**: Store in `.env` file, never commit to repo. If AI editor errors with 500, check API key configuration
+- **Version History**: If recovery fails, verify field mapping in admin_site.py recover_view
+- **Configuration**: If site changes aren't reflected, run update_site_config command
+- **Blog Content**: Posts must have "published" status to be visible
+- **AI Blog Editor**: If content doesn't appear in editor, check regex patterns in blog/views.py (ai_blog_conversation_view)
 
 ### Version History Issues
 - If version history comparison shows incorrect data, check the field comparison logic in admin_site.py
@@ -240,12 +258,16 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 - API key issues: use the robust get_anthropic_api_key function for debugging
 
 ## Coding Style
-- PEP 8 for Python code
-- Django naming conventions
-- Class-based views preferred over function-based views
-- Comprehensive docstrings for all significant functions/methods
+- PEP 8 for Python code with Django naming conventions (snake_case for variables/functions, CamelCase for classes)
+- Class-based views preferred over function-based views 
+- Order imports: standard library → Django → third-party → local apps
+- Use f-strings for string formatting (Python 3.6+ project)
+- Google-style docstrings for all significant functions/methods
+- Error handling: use try/except with specific exceptions, never pass silently
+- Tests follow AAA pattern (Arrange, Act, Assert)
+- Backup files (with .bak extension) must be maintained for all source files
 - CSS using flexbox for responsive design
-- JavaScript: vanilla JS preferred (no jQuery dependencies) for better compatibility
+- JavaScript: ES6+ features with JSDoc-style comments and no jQuery dependencies
 
 ## Technologies
 - Django 5.1
