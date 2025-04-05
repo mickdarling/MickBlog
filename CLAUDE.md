@@ -37,7 +37,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Version control via django-reversion 
 - AI integration via Anthropic Claude API
 - Two complementary AI blog content creation tools:
-  1. **AI Blog Editor (Conversational)**: Two-panel interface with chat and editor
+  1. **AI Blog Editor (Conversational)**: Side-by-side interface with chat, editor and preview
+     - Features comprehensive version history with undo/redo functionality
+     - Includes visual diff view for comparing versions
+     - Supports keyboard shortcuts (Ctrl+Z, Ctrl+Y)
   2. **AI-AutoCreate (Form-based)**: Structured form for guided content generation
 
 ## AI Response Structure

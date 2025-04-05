@@ -120,18 +120,42 @@
       flex: 1;
       padding: 15px;
       border: 1px solid #ddd;
-      border-top: none;
-      border-radius: 0 0 5px 5px;
+      border-radius: 5px;
+    }
+    
+    .editor-content.side-by-side {
+      display: flex;
+      padding: 0;
+      gap: 15px;
+      min-height: 500px;
+    }
+    
+    .editor-pane, .preview-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .pane-header {
+      padding: 10px 15px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      color: #495057;
     }
     
     .editor-textarea {
       width: 100%;
-      height: 500px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 10px;
+      flex: 1;
+      border: none;
+      padding: 15px;
       font-family: monospace;
-      resize: vertical;
+      resize: none;
+      font-size: 14px;
+      line-height: 1.5;
     }
     
     .button-group {
@@ -202,6 +226,230 @@
       margin-top: 0;
       border-bottom: 1px solid #eee;
       padding-bottom: 10px;
+    }
+    
+    .preview-content {
+      background-color: #fff;
+      padding: 15px;
+      flex: 1;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    
+    .preview-content img {
+      max-width: 100%;
+    }
+    
+    .preview-content h1, .preview-content h2, .preview-content h3 {
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+    }
+    
+    .preview-content code {
+      background-color: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    
+    .preview-content pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      background-color: #fff;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 800px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+    }
+    
+    .close-modal {
+      font-size: 24px;
+      cursor: pointer;
+      color: #aaa;
+    }
+    
+    .close-modal:hover {
+      color: #333;
+    }
+    
+    .modal-body {
+      padding: 15px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    /* Version history styles */
+    .version-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .version-item {
+      padding: 10px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .version-item:hover {
+      background-color: #f5f5f5;
+    }
+    
+    .version-item.active {
+      background-color: #e3f2fd;
+      border-left: 3px solid #2196F3;
+    }
+    
+    .version-info {
+      flex: 1;
+    }
+    
+    .version-time {
+      color: #666;
+      font-size: 0.9em;
+    }
+    
+    .version-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    /* Diff view styles */
+    .diff-container {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    
+    .diff-header {
+      padding: 10px 15px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .diff-header h4 {
+      margin: 0 0 10px 0;
+    }
+    
+    .diff-legend {
+      display: flex;
+      gap: 15px;
+      font-size: 0.9em;
+    }
+    
+    .diff-removed {
+      color: #d32f2f;
+      position: relative;
+      padding-left: 15px;
+    }
+    
+    .diff-removed::before {
+      content: "-";
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    
+    .diff-added {
+      color: #388e3c;
+      position: relative;
+      padding-left: 15px;
+    }
+    
+    .diff-added::before {
+      content: "+";
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    
+    .diff-content {
+      max-height: 400px;
+      overflow-y: auto;
+      background-color: #fff;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 10px 0;
+    }
+    
+    .diff-line {
+      padding: 2px 15px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    
+    .diff-line.diff-removed {
+      background-color: #ffebee;
+      text-decoration: line-through;
+    }
+    
+    .diff-line.diff-added {
+      background-color: #e8f5e9;
+    }
+    
+    .diff-actions {
+      padding: 10px 15px;
+      background-color: #f8f9fa;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .diff-actions button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .diff-actions .restore-version {
+      background-color: #2196F3;
+      color: white;
+    }
+    
+    .diff-actions .close-diff {
+      background-color: #6c757d;
+      color: white;
     }
     
     .diff-highlight {
@@ -330,19 +578,15 @@
         </div>
       </div>
       
-      <!-- Editor tabs -->
-      <div class="editor-tabs">
-        <div class="editor-tab active" data-tab="editor">Editor</div>
-        <div class="editor-tab" data-tab="preview">Preview</div>
-      </div>
-      
-      <!-- Editor content -->
-      <div class="editor-content">
-        <div class="tab-content active" id="editorTab">
+      <!-- Side-by-side editor and preview -->
+      <div class="editor-content side-by-side">
+        <div class="editor-pane">
+          <div class="pane-header">Plain Text</div>
           <textarea id="postContent" class="editor-textarea" placeholder="Your blog post content in markdown format..."></textarea>
         </div>
         
-        <div class="tab-content" id="previewTab" style="display: none;">
+        <div class="preview-pane">
+          <div class="pane-header">Markdown Preview</div>
           <div id="previewContent" class="preview-content"></div>
         </div>
       </div>
@@ -352,9 +596,26 @@
         <div>
           <button id="previewButton" class="secondary">Refresh Preview</button>
           <button id="suggestImprovements" class="secondary">Suggest Improvements</button>
+          <button id="undoButton" class="secondary" disabled>Undo</button>
+          <button id="redoButton" class="secondary" disabled>Redo</button>
+          <span id="versionInfo" style="margin-left: 10px; color: #6c757d; font-size: 0.9em;">Version: 1</span>
         </div>
         <div>
+          <button id="historyButton" class="secondary">History</button>
           <button id="saveButton" class="success">Save Post</button>
+        </div>
+      </div>
+      
+      <!-- Version history modal -->
+      <div id="historyModal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Version History</h3>
+            <span class="close-modal">&times;</span>
+          </div>
+          <div class="modal-body">
+            <div id="versionList" class="version-list"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -405,32 +666,345 @@
       const loadingSpinner = document.getElementById('loadingSpinner');
       const loadingMessage = document.getElementById('loadingMessage');
       const suggestImprovements = document.getElementById('suggestImprovements');
+      const undoButton = document.getElementById('undoButton');
+      const redoButton = document.getElementById('redoButton');
+      const versionInfo = document.getElementById('versionInfo');
+      const historyButton = document.getElementById('historyButton');
+      const historyModal = document.getElementById('historyModal');
+      const versionList = document.getElementById('versionList');
+      const closeModal = document.querySelector('.close-modal');
       
-      // Tab navigation
-      const tabs = document.querySelectorAll('.editor-tab');
-      const tabContents = document.querySelectorAll('.tab-content');
+      // Initialize the preview on page load
+      setTimeout(updatePreview, 500);
       
-      tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-          // Remove active class from all tabs
-          tabs.forEach(t => t.classList.remove('active'));
-          
-          // Add active class to clicked tab
-          this.classList.add('active');
-          
-          // Hide all tab contents
-          tabContents.forEach(content => content.style.display = 'none');
-          
-          // Show selected tab content
-          const tabName = this.getAttribute('data-tab');
-          document.getElementById(tabName + 'Tab').style.display = 'block';
-          
-          // If preview tab is selected, update the preview
-          if (tabName === 'preview') {
-            updatePreview();
+      /**
+       * Version History System
+       * 
+       * This object manages a complete version history for content in the editor,
+       * providing undo/redo functionality and a full history browser.
+       * 
+       * Key features:
+       * - Tracks all content changes with timestamps and source info
+       * - Provides undo/redo functionality with UI updates
+       * - Offers a version browser with diff view for comparing changes
+       * - Supports restoring any historical version
+       * - Auto-detects content changes and creates versions intelligently
+       */
+      const versionHistory = {
+        versions: [], // Array to store all versions of content
+        currentIndex: -1, // Current position in version history
+        
+        /**
+         * Initialize the version history with the current content
+         * Creates the first version (baseline) for the undo/redo system
+         */
+        init() {
+          this.addVersion(postContent.value);
+        },
+        
+        /**
+         * Add a new version to the history
+         * 
+         * @param {string} content - The content to add as a new version
+         * @param {string} source - The source of the change ('edit', 'ai', 'undo', 'redo', 'restore')
+         * @returns {boolean} - Whether a new version was added
+         */
+        addVersion(content, source = 'edit') {
+          // Don't add duplicate content (same as current version)
+          if (this.currentIndex >= 0 && this.versions[this.currentIndex].content === content) {
+            return false;
           }
-        });
-      });
+          
+          // If we're not at the latest version (user did an undo),
+          // remove all versions after current position (standard undo/redo behavior)
+          if (this.currentIndex < this.versions.length - 1) {
+            this.versions = this.versions.slice(0, this.currentIndex + 1);
+          }
+          
+          // Add the new version with metadata
+          this.versions.push({
+            content: content,
+            timestamp: new Date(),
+            source: source  // Tracks where the change came from
+          });
+          
+          // Update current index to point to the new version
+          this.currentIndex = this.versions.length - 1;
+          
+          // Update UI to reflect the new version state
+          this.updateUI();
+          
+          return true;
+        },
+        
+        /**
+         * Moves back one version in history (undo operation)
+         * 
+         * @returns {boolean} - Whether the undo was successful
+         */
+        undo() {
+          // Check if we can go back (not at the beginning of history)
+          if (this.currentIndex > 0) {
+            this.currentIndex--; // Move back one version
+            postContent.value = this.versions[this.currentIndex].content; // Update editor content
+            updatePreview(); // Update preview to reflect content
+            this.updateUI(); // Update UI elements
+            return true;
+          }
+          return false; // Can't undo (at first version)
+        },
+        
+        /**
+         * Moves forward one version in history (redo operation)
+         * 
+         * @returns {boolean} - Whether the redo was successful
+         */
+        redo() {
+          // Check if we can go forward (not at the end of history)
+          if (this.currentIndex < this.versions.length - 1) {
+            this.currentIndex++; // Move forward one version
+            postContent.value = this.versions[this.currentIndex].content; // Update editor content
+            updatePreview(); // Update preview to reflect content
+            this.updateUI(); // Update UI elements 
+            return true;
+          }
+          return false; // Can't redo (at last version)
+        },
+        
+        /**
+         * Restores a specific version from history by index
+         * 
+         * @param {number} index - The index of the version to restore
+         * @returns {boolean} - Whether the restore was successful
+         */
+        restoreVersion(index) {
+          // Validate index
+          if (index >= 0 && index < this.versions.length) {
+            // If restoring a previous version, add current as a new version first
+            // This allows going back to the current state after restoring
+            if (index !== this.currentIndex) {
+              // First record where we're restoring from in the history
+              this.versions.push({
+                content: this.versions[index].content,
+                timestamp: new Date(),
+                source: 'restore'  // Mark as a restored version
+              });
+              this.currentIndex = this.versions.length - 1;
+            }
+            
+            // Update content and UI
+            postContent.value = this.versions[index].content;
+            updatePreview();
+            this.updateUI();
+            return true;
+          }
+          return false; // Invalid index
+        },
+        
+        /**
+         * Updates the UI elements to reflect the current version state
+         * - Enables/disables undo/redo buttons based on position in history
+         * - Updates version counter display
+         * - Refreshes history modal if it's open
+         */
+        updateUI() {
+          // Update undo/redo buttons state
+          undoButton.disabled = this.currentIndex <= 0; // Disable undo if at first version
+          redoButton.disabled = this.currentIndex >= this.versions.length - 1; // Disable redo if at last version
+          
+          // Update version info counter
+          versionInfo.textContent = `Version: ${this.currentIndex + 1} of ${this.versions.length}`;
+          
+          // Update version history list if the modal is open
+          if (historyModal.style.display === 'flex') {
+            this.renderVersionList();
+          }
+        },
+        
+        // Render the version list in the history modal
+        renderVersionList() {
+          versionList.innerHTML = '';
+          
+          this.versions.forEach((version, index) => {
+            const isActive = index === this.currentIndex;
+            const formattedTime = this.formatTimestamp(version.timestamp);
+            const sourceLabel = this.getSourceLabel(version.source);
+            
+            const versionItem = document.createElement('div');
+            versionItem.className = `version-item ${isActive ? 'active' : ''}`;
+            versionItem.innerHTML = `
+              <div class="version-info">
+                <div>Version ${index + 1} (${sourceLabel})</div>
+                <div class="version-time">${formattedTime}</div>
+              </div>
+              <div class="version-actions">
+                <button class="restore-btn ${isActive ? 'disabled' : ''}" ${isActive ? 'disabled' : ''}>Restore</button>
+              </div>
+            `;
+            
+            // Add event listener for restore button
+            const restoreBtn = versionItem.querySelector('.restore-btn');
+            if (!isActive) {
+              restoreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();  // Prevent item click from firing
+                this.restoreVersion(index);
+                historyModal.style.display = 'none';
+              });
+            }
+            
+            // Add event listener for item click (preview)
+            versionItem.addEventListener('click', () => {
+              // Highlight the active item
+              document.querySelectorAll('.version-item').forEach(item => {
+                item.classList.remove('active');
+              });
+              versionItem.classList.add('active');
+              
+              // Show diff between current and selected version
+              this.showDiff(index);
+            });
+            
+            versionList.appendChild(versionItem);
+          });
+        },
+        
+        // Format timestamp for display
+        formatTimestamp(timestamp) {
+          const now = new Date();
+          const diff = now - timestamp;
+          
+          // If less than a minute ago, show 'just now'
+          if (diff < 60000) {
+            return 'just now';
+          }
+          
+          // If less than an hour ago, show minutes
+          if (diff < 3600000) {
+            const minutes = Math.floor(diff / 60000);
+            return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+          }
+          
+          // Otherwise, show the time
+          return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        },
+        
+        // Get a human-readable label for the source
+        getSourceLabel(source) {
+          const labels = {
+            'edit': 'Manual Edit',
+            'ai': 'AI Generated',
+            'undo': 'Undo',
+            'redo': 'Redo',
+            'restore': 'Restored'
+          };
+          
+          return labels[source] || 'Edit';
+        },
+        
+        // Show diff between two versions
+        showDiff(index) {
+          if (index < 0 || index >= this.versions.length) return;
+          
+          const currentContent = this.versions[this.currentIndex].content;
+          const selectedContent = this.versions[index].content;
+          
+          // Create a diff view to show changes
+          const diffContainer = document.createElement('div');
+          diffContainer.className = 'diff-container';
+          
+          // Add header with information about the versions
+          const diffHeader = document.createElement('div');
+          diffHeader.className = 'diff-header';
+          diffHeader.innerHTML = `
+            <h4>Changes between Version ${index + 1} and Version ${this.currentIndex + 1}</h4>
+            <div class="diff-legend">
+              <span class="diff-removed">Removed</span>
+              <span class="diff-added">Added</span>
+            </div>
+          `;
+          diffContainer.appendChild(diffHeader);
+          
+          // Split content into lines
+          const currentLines = currentContent.split('\n');
+          const selectedLines = selectedContent.split('\n');
+          
+          // Simple line-by-line diff
+          const diffContent = document.createElement('div');
+          diffContent.className = 'diff-content';
+          
+          // Find the max length of both arrays
+          const maxLines = Math.max(currentLines.length, selectedLines.length);
+          
+          for (let i = 0; i < maxLines; i++) {
+            const currentLine = i < currentLines.length ? currentLines[i] : '';
+            const selectedLine = i < selectedLines.length ? selectedLines[i] : '';
+            
+            if (currentLine !== selectedLine) {
+              // Lines are different
+              if (selectedLine) {
+                const oldLine = document.createElement('div');
+                oldLine.className = 'diff-line diff-removed';
+                oldLine.textContent = selectedLine;
+                diffContent.appendChild(oldLine);
+              }
+              
+              if (currentLine) {
+                const newLine = document.createElement('div');
+                newLine.className = 'diff-line diff-added';
+                newLine.textContent = currentLine;
+                diffContent.appendChild(newLine);
+              }
+            } else {
+              // Lines are the same
+              const unchangedLine = document.createElement('div');
+              unchangedLine.className = 'diff-line';
+              unchangedLine.textContent = currentLine;
+              diffContent.appendChild(unchangedLine);
+            }
+          }
+          
+          diffContainer.appendChild(diffContent);
+          
+          // Add actions buttons
+          const diffActions = document.createElement('div');
+          diffActions.className = 'diff-actions';
+          diffActions.innerHTML = `
+            <button class="restore-version">Restore Version ${index + 1}</button>
+            <button class="close-diff">Close</button>
+          `;
+          diffContainer.appendChild(diffActions);
+          
+          // Add event listeners for buttons
+          diffActions.querySelector('.restore-version').addEventListener('click', () => {
+            this.restoreVersion(index);
+            
+            // Remove the diff view
+            if (document.querySelector('.diff-container')) {
+              document.querySelector('.diff-container').remove();
+            }
+          });
+          
+          diffActions.querySelector('.close-diff').addEventListener('click', () => {
+            // Remove the diff view
+            if (document.querySelector('.diff-container')) {
+              document.querySelector('.diff-container').remove();
+            }
+          });
+          
+          // Remove any existing diff view
+          if (document.querySelector('.diff-container')) {
+            document.querySelector('.diff-container').remove();
+          }
+          
+          // Add the diff view to the modal
+          document.querySelector('.modal-body').appendChild(diffContainer);
+        }
+      };
+      
+      // Initialize version history with current content
+      setTimeout(() => {
+        versionHistory.init();
+      }, 1000);
       
       // CSRF token function
       function getCsrfToken() {
@@ -456,8 +1030,8 @@
        * 4. Includes the current title in the preview
        */
       function updatePreview() {
-        loadingSpinner.style.display = 'flex';
-        loadingMessage.textContent = 'Generating preview...';
+        // Show loading indicator in the preview panel
+        previewContent.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner" style="display: inline-block;"></div><p>Updating preview...</p></div>';
         
         fetch('{% url "blog:markdown_preview" %}', {
           method: 'POST',
@@ -471,16 +1045,12 @@
         })
         .then(response => response.json())
         .then(data => {
-          previewContent.innerHTML = `
-            <h1>${postTitle.value || 'Untitled Post'}</h1>
-            ${data.html}
-          `;
-          loadingSpinner.style.display = 'none';
+          // Don't manually add the title since it's already in the content
+          previewContent.innerHTML = data.html;
         })
         .catch(error => {
           console.error('Error generating preview:', error);
-          loadingSpinner.style.display = 'none';
-          alert('Error generating preview. Please try again.');
+          previewContent.innerHTML = '<div style="color: red; padding: 20px;">Error generating preview. Please try again.</div>';
         });
       }
       
@@ -557,16 +1127,22 @@
             const previousContent = postContent.value;
             const isFirstContent = !previousContent.trim();
             
-            // Update the editor with the new content
+            // Update editor with the new content
             postContent.value = data.content;
+            
+            // Update the preview as well
+            updatePreview();
+            
+            // Add a new version to history
+            versionHistory.addVersion(data.content, 'ai');
             
             // Add an appropriate system message based on whether this is the first content or an update
             if (isFirstContent) {
               addMessage("✨ Blog post created in the editor! You can now edit or refine it.", "system");
               
-              // Add a hint for how to preview
+              // Add a hint about the side-by-side editor
               setTimeout(() => {
-                addMessage("Tip: Click the 'Preview' tab to see how your post will look when published.", "system");
+                addMessage("Tip: Your content appears in the editor on the left and the preview on the right. Changes update automatically.", "system");
               }, 1500);
             } else {
               addMessage("📝 Blog post updated in the editor", "system");
@@ -1071,6 +1647,81 @@
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
           handleUserMessage();
+        }
+      });
+      
+      /**
+       * Event listener for content changes in the editor
+       * - Updates the preview with a 1-second debounce (for performance)
+       * - Creates new versions after 3 seconds of inactivity (avoids creating
+       *   a version for every keystroke while still tracking meaningful changes)
+       */
+      postContent.addEventListener('input', function() {
+        // Debounce the preview update (prevent too many requests)
+        clearTimeout(this.debounce);
+        this.debounce = setTimeout(function() {
+          // Update the preview with the current content
+          updatePreview();
+          
+          // Debounce version creation (only create after user stops typing)
+          clearTimeout(postContent.versionDebounce);
+          postContent.versionDebounce = setTimeout(function() {
+            // Create a new version after 3 seconds of inactivity
+            versionHistory.addVersion(postContent.value, 'edit');
+          }, 3000); // 3-second inactivity timer for version creation
+        }, 1000); // 1-second debounce for preview update
+      });
+      
+      // Modal event listeners
+      historyButton.addEventListener('click', function() {
+        versionHistory.renderVersionList();
+        historyModal.style.display = 'flex';
+      });
+      
+      closeModal.addEventListener('click', function() {
+        historyModal.style.display = 'none';
+      });
+      
+      // Close modal when clicking outside content
+      historyModal.addEventListener('click', function(e) {
+        if (e.target === historyModal) {
+          historyModal.style.display = 'none';
+        }
+      });
+      
+      // Undo/Redo buttons
+      undoButton.addEventListener('click', function() {
+        versionHistory.undo();
+      });
+      
+      redoButton.addEventListener('click', function() {
+        versionHistory.redo();
+      });
+      
+      // Handle keyboard shortcuts for undo/redo
+      document.addEventListener('keydown', function(e) {
+        // Don't capture keystrokes when focused on inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+          // But still capture Ctrl+Z and Ctrl+Y in the post content editor
+          if (e.target === postContent) {
+            if (e.ctrlKey && e.key === 'z') {
+              e.preventDefault();
+              versionHistory.undo();
+            } else if (e.ctrlKey && e.key === 'y') {
+              e.preventDefault();
+              versionHistory.redo();
+            }
+          }
+          return;
+        }
+        
+        // Global keyboard shortcuts
+        if (e.ctrlKey && e.key === 'z') {
+          e.preventDefault();
+          versionHistory.undo();
+        } else if (e.ctrlKey && e.key === 'y') {
+          e.preventDefault();
+          versionHistory.redo();
         }
       });
       

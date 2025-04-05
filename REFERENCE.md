@@ -18,13 +18,27 @@ MickBlog is a Django-based personal website/blog with AI-powered site configurat
 
 ### April 2025 Updates
 
+#### Enhanced AI Blog Editor with Version History and Side-by-Side Layout
+- Completely redesigned the AI Blog Editor interface:
+  - Replaced tab system with side-by-side editor and preview layout
+  - Implemented real-time markdown preview updating
+  - Improved visual feedback with formatted markdown rendering
+  - Added responsive styling for code blocks, headings, and other elements
+- Added comprehensive version history system:
+  - Automatic version tracking with smart debouncing (avoids creating versions for every keystroke)
+  - Full undo/redo functionality with UI integration (buttons and keyboard shortcuts)
+  - Visual diff view for comparing versions with additions and deletions highlighted
+  - Version history browser showing timestamps and version sources
+  - Ability to restore any previous version from history
+  - Keyboard shortcuts for common actions (Ctrl+Z, Ctrl+Y)
+
 #### Added AI Blog Content Creation Tools
 - Implemented two complementary AI tools for blog content creation:
-  1. **AI Blog Editor (Conversational)**: Two-panel interface with chat and editor
+  1. **AI Blog Editor (Conversational)**: Side-by-side interface with chat, editor and preview
      - Natural language conversation with AI to create and refine posts
      - Real-time content updates in the editor panel
-     - Side-by-side diff view for comparing versions
-     - Toggle system for previewing changes
+     - Version history tracking and management
+     - Visual diff comparison between versions
   2. **AI-AutoCreate (Form-based)**: Structured form interface for rapid content generation
      - Guided fields for title, topic, tone, and structure
      - One-click post generation with customizable parameters
