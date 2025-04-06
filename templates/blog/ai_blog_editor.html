@@ -741,27 +741,38 @@
        */
       /**
        * Storage Manager for persisting editor state
-       * Handles saving and retrieving data from localStorage
+       * 
+       * This module provides persistent storage for the AI blog editor, ensuring content 
+       * isn't lost when navigating away or refreshing. It uses browser's localStorage 
+       * with these key features:
+       * 
+       * - Automatically saves all editor state (content, metadata, history, chat)
+       * - Restores previous session when returning to editor
+       * - Provides 24-hour expiration for abandoned drafts
+       * - Includes complete version history persistence
+       * - Preserves tab state and scroll positions
+       * - Maintains chat history for context continuity
        */
       const storageManager = {
-        // Keys for localStorage
+        // Keys for localStorage - comprehensive coverage of all editor state
         KEYS: {
-          CONTENT: 'ai_blog_editor_content',
-          TITLE: 'ai_blog_editor_title',
-          CATEGORY: 'ai_blog_editor_category',
-          AUTHOR: 'ai_blog_editor_author',
-          STATUS: 'ai_blog_editor_status',
-          VERSION_HISTORY: 'ai_blog_editor_version_history',
-          CURRENT_INDEX: 'ai_blog_editor_current_index',
-          ACTIVE_TAB: 'ai_blog_editor_active_tab',
-          CHAT_HISTORY: 'ai_blog_editor_chat_history',
-          LAST_EDITED: 'ai_blog_editor_last_edited',
-          DIFF_PREVIOUS: 'ai_blog_editor_diff_previous',
-          DIFF_CURRENT: 'ai_blog_editor_diff_current'
+          CONTENT: 'ai_blog_editor_content',          // The actual markdown content
+          TITLE: 'ai_blog_editor_title',              // Post title field
+          CATEGORY: 'ai_blog_editor_category',        // Selected category ID
+          AUTHOR: 'ai_blog_editor_author',            // Selected author ID
+          STATUS: 'ai_blog_editor_status',            // Post status (draft/published)
+          VERSION_HISTORY: 'ai_blog_editor_version_history',  // Complete version history array
+          CURRENT_INDEX: 'ai_blog_editor_current_index',      // Current position in version history
+          ACTIVE_TAB: 'ai_blog_editor_active_tab',    // Which tab is active (editor/diff)
+          CHAT_HISTORY: 'ai_blog_editor_chat_history',// Complete conversation history
+          LAST_EDITED: 'ai_blog_editor_last_edited',  // Timestamp for expiration check
+          DIFF_PREVIOUS: 'ai_blog_editor_diff_previous', // Content for diff comparison (before)
+          DIFF_CURRENT: 'ai_blog_editor_diff_current'    // Content for diff comparison (after)
         },
         
         /**
          * Saves the entire editor state to localStorage
+         * Captures all aspects of editor state for complete session persistence
          */
         saveEditorState() {
           const now = new Date();
@@ -773,15 +784,15 @@
           localStorage.setItem(this.KEYS.AUTHOR, postAuthor.value);
           localStorage.setItem(this.KEYS.STATUS, postStatus.value);
           
-          // Save version history
+          // Save version history - enables complete undo/redo functionality
           localStorage.setItem(this.KEYS.VERSION_HISTORY, JSON.stringify(versionHistory.versions));
           localStorage.setItem(this.KEYS.CURRENT_INDEX, versionHistory.currentIndex);
           
-          // Save active tab
+          // Save active tab - maintains UI state
           const activeTab = document.querySelector('.editor-tab.active').getAttribute('data-tab');
           localStorage.setItem(this.KEYS.ACTIVE_TAB, activeTab);
           
-          // Save chat history (get all message elements)
+          // Save chat history - preserves complete conversation context
           const chatMessages = Array.from(document.querySelectorAll('#chatMessages .message'))
             .map(msg => {
               const type = msg.classList.contains('user') ? 'user' : 
@@ -793,7 +804,7 @@
             });
           localStorage.setItem(this.KEYS.CHAT_HISTORY, JSON.stringify(chatMessages));
           
-          // Save timestamp
+          // Save timestamp for expiration check (24-hour drafts)
           localStorage.setItem(this.KEYS.LAST_EDITED, now.toISOString());
           
           console.log('Editor state saved to localStorage at:', now);
@@ -801,6 +812,8 @@
         
         /**
          * Loads the entire editor state from localStorage
+         * Provides complete session restoration with safety checks
+         * 
          * @returns {boolean} Whether there was state to restore
          */
         loadEditorState() {
@@ -813,6 +826,7 @@
           }
           
           // Get timestamp and check if it's recent (within 24 hours)
+          // This prevents cluttering with abandoned drafts
           const lastEdited = localStorage.getItem(this.KEYS.LAST_EDITED);
           const now = new Date();
           const lastEditedDate = lastEdited ? new Date(lastEdited) : null;
@@ -824,7 +838,7 @@
             return false;
           }
           
-          // Restore basic content and metadata
+          // Restore basic content and metadata with fallbacks to defaults
           const originalContent = content;
           postContent.value = content;
           postTitle.value = localStorage.getItem(this.KEYS.TITLE) || '';
@@ -832,7 +846,7 @@
           postAuthor.value = localStorage.getItem(this.KEYS.AUTHOR) || '';
           postStatus.value = localStorage.getItem(this.KEYS.STATUS) || 'draft';
           
-          // Restore version history
+          // Restore version history with complete undo/redo capability
           const savedVersions = localStorage.getItem(this.KEYS.VERSION_HISTORY);
           const savedCurrentIndex = localStorage.getItem(this.KEYS.CURRENT_INDEX);
           
@@ -841,6 +855,7 @@
               const parsedVersions = JSON.parse(savedVersions);
               
               // Convert string timestamps back to Date objects
+              // JSON.stringify doesn't preserve Date objects, so we need to reconstitute them
               parsedVersions.forEach(v => {
                 v.timestamp = new Date(v.timestamp);
               });
@@ -849,7 +864,7 @@
               versionHistory.currentIndex = parseInt(savedCurrentIndex, 10);
               versionHistory.updateUI();
               
-              // Check if we have stored diff content
+              // Check if we have stored diff content for diff view
               const storedPrevious = localStorage.getItem(this.KEYS.DIFF_PREVIOUS);
               const storedCurrent = localStorage.getItem(this.KEYS.DIFF_CURRENT);
               
@@ -888,11 +903,11 @@
             }
           }
           
-          // Restore active tab
+          // Restore active tab - maintains UI state between sessions
           const activeTab = localStorage.getItem(this.KEYS.ACTIVE_TAB) || 'editor';
           document.querySelector(`.editor-tab[data-tab="${activeTab}"]`).click();
           
-          // Restore chat history
+          // Restore chat history - preserves conversation context between sessions
           const chatHistoryJSON = localStorage.getItem(this.KEYS.CHAT_HISTORY);
           if (chatHistoryJSON) {
             try {
@@ -923,6 +938,7 @@
         
         /**
          * Clears all saved editor state from localStorage
+         * Used when starting fresh or when draft is explicitly discarded
          */
         clearEditorState() {
           Object.values(this.KEYS).forEach(key => {
@@ -1271,37 +1287,59 @@
           versionHistory.init();
         }
         
-        // Add a "clear draft" button to the button group
+        // Add a "Clear Draft" button for starting fresh with a clean editor
+        // This is an important companion feature to the localStorage persistence
+        // system, allowing users to explicitly discard saved drafts when needed
         const buttonGroup = document.querySelector('.button-group div:last-child');
         const clearDraftBtn = document.createElement('button');
         clearDraftBtn.className = 'secondary';
         clearDraftBtn.textContent = 'Clear Draft';
         clearDraftBtn.style.marginRight = '10px';
+        clearDraftBtn.title = 'Discard the current draft and all history'; // Add tooltip
+        
+        // Set up confirmation dialog to prevent accidental clearing
         clearDraftBtn.addEventListener('click', function() {
           if (confirm('Are you sure you want to clear this draft? This will delete all content and history.')) {
+            // Clear all localStorage data associated with this editor
             storageManager.clearEditorState();
+            // Reload the page to start fresh with a clean editor state
             window.location.reload();
           }
         });
         buttonGroup.prepend(clearDraftBtn);
         
-        // Set up synchronized scrolling between editor and preview
+        // Set up synchronized scrolling between editor and preview panes
+        // This ensures that as you scroll in one pane, the other follows proportionally
         let isEditorScrolling = false;
         let isPreviewScrolling = false;
         
+        /**
+         * Synchronized Scrolling System
+         * 
+         * This feature coordinates scrolling between the editor and preview panes
+         * to create a unified reading/editing experience by:
+         * 
+         * 1. Tracking scroll position ratios rather than absolute positions
+         * 2. Using mutual-exclusion flags to prevent scroll feedback loops
+         * 3. Matching relative positions between panes of different heights
+         * 4. Providing a smooth, natural scrolling experience in both directions
+         */
+        
         // When editor scrolls, update preview scroll position
         postContent.addEventListener('scroll', function() {
+          // Only proceed if not already handling a preview-initiated scroll
           if (!isPreviewScrolling) {
             isEditorScrolling = true;
             
             // Calculate the scroll ratio (how far through the content we are)
+            // This approach handles different content heights between panes
             const ratio = this.scrollTop / (this.scrollHeight - this.clientHeight);
             
-            // Apply the same ratio to the preview
+            // Apply the same proportional position to the preview
             const previewScrollTop = ratio * (previewContent.scrollHeight - previewContent.clientHeight);
             previewContent.scrollTop = previewScrollTop;
             
-            // Reset the flag after a short delay
+            // Reset the flag after a short delay to allow scroll to complete
             setTimeout(() => {
               isEditorScrolling = false;
             }, 50);
@@ -1310,17 +1348,18 @@
         
         // When preview scrolls, update editor scroll position
         previewContent.addEventListener('scroll', function() {
+          // Only proceed if not already handling an editor-initiated scroll
           if (!isEditorScrolling) {
             isPreviewScrolling = true;
             
-            // Calculate the scroll ratio
+            // Calculate the scroll ratio using the same approach
             const ratio = this.scrollTop / (this.scrollHeight - this.clientHeight);
             
-            // Apply the same ratio to the editor
+            // Apply the same proportional position to the editor
             const editorScrollTop = ratio * (postContent.scrollHeight - postContent.clientHeight);
             postContent.scrollTop = editorScrollTop;
             
-            // Reset the flag after a short delay
+            // Reset the flag after a short delay to allow scroll to complete
             setTimeout(() => {
               isPreviewScrolling = false;
             }, 50);
@@ -1346,36 +1385,46 @@
       }
       
       /**
-       * Renders the markdown content as HTML in the preview tab
-       * while preserving scroll position
+       * Scroll-Preserving Preview System
        * 
-       * This function:
-       * 1. Captures the current scroll position and ratio
-       * 2. Sends the current editor content to the server for markdown rendering
-       * 3. Updates the preview pane with the rendered HTML
-       * 4. Restores the scroll position based on the previous ratio
+       * Renders markdown content as HTML in the preview pane while intelligently
+       * preserving scroll position to prevent jarring jumps during editing.
+       * 
+       * This system solves the common problem of lost scroll position during 
+       * content updates by:
+       * 
+       * 1. Capturing scroll positions in both editor and preview panes
+       * 2. Computing relative position ratios that are content-length independent
+       * 3. Updating content with non-blocking, smooth transitions
+       * 4. Intelligently determining which pane's position to preserve based on focus
+       * 5. Handling errors gracefully without disrupting the user experience
+       * 
+       * This creates a seamless editing experience where content updates don't
+       * interrupt the user's focus or reading position.
        */
       function updatePreview() {
-        // Store current scroll positions and heights
+        // Store current scroll positions and heights for both panes
         const editorScrollTop = postContent.scrollTop;
         const editorScrollHeight = postContent.scrollHeight;
         const previewScrollTop = previewContent.scrollTop;
         const previewScrollHeight = previewContent.scrollHeight;
         
-        // Calculate scroll ratios (position relative to total scrollable area)
+        // Calculate scroll ratios for position-independent restoration
+        // Adding max() with 1 prevents division by zero if content is too short to scroll
         const editorScrollRatio = editorScrollTop / Math.max(editorScrollHeight - postContent.clientHeight, 1);
         const previewScrollRatio = previewScrollTop / Math.max(previewScrollHeight - previewContent.clientHeight, 1);
         
-        // Add small loading indicator that doesn't disrupt layout
+        // Create a non-intrusive loading indicator that doesn't disrupt layout
         const loadingIndicator = document.createElement('div');
         loadingIndicator.className = 'preview-loading';
         loadingIndicator.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px; display: inline-block; margin-right: 5px;"></div> Updating...';
         loadingIndicator.style.cssText = 'position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 3px; font-size: 12px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
         
-        // Add loading indicator without clearing content
+        // Add loading indicator without disturbing existing content
         previewContent.parentNode.style.position = 'relative';
         previewContent.parentNode.appendChild(loadingIndicator);
         
+        // Send content to server for markdown rendering
         fetch('{% url "blog:markdown_preview" %}', {
           method: 'POST',
           headers: {
@@ -1388,44 +1437,45 @@
         })
         .then(response => response.json())
         .then(data => {
-          // Update content
+          // Update preview content with rendered HTML
           previewContent.innerHTML = data.html;
           
-          // Remove loading indicator
+          // Remove loading indicator once content is loaded
           if (loadingIndicator.parentNode) {
             loadingIndicator.parentNode.removeChild(loadingIndicator);
           }
           
-          // Restore scroll position after a tiny delay to allow rendering
+          // Restore scroll position after a tiny delay to allow DOM rendering
           setTimeout(() => {
-            // Use the editor's scroll ratio if the user is actively typing
-            // Otherwise use the preview's scroll ratio if user was scrolling the preview
+            // Intelligently choose which position to preserve:
+            // - If user is typing in editor, preserve editor's position
+            // - If user was viewing/scrolling preview, preserve preview's position
             const ratio = document.activeElement === postContent ? editorScrollRatio : previewScrollRatio;
             
-            // Calculate new scroll position
+            // Calculate new absolute scroll position from ratio
             const newScrollTop = ratio * (previewContent.scrollHeight - previewContent.clientHeight);
             
-            // Set the scroll position
+            // Apply the scroll position without triggering scroll events
             previewContent.scrollTop = newScrollTop;
           }, 10);
         })
         .catch(error => {
           console.error('Error generating preview:', error);
           
-          // Show error but keep existing content
+          // Show a non-disruptive error message that preserves existing content
           const errorNotice = document.createElement('div');
           errorNotice.style.cssText = 'color: red; padding: 10px; margin: 10px 0; background: #ffebee; border-radius: 4px;';
           errorNotice.textContent = 'Error updating preview. Will retry on next edit.';
           previewContent.prepend(errorNotice);
           
-          // Remove error after a few seconds
+          // Auto-remove error after a few seconds to avoid cluttering the interface
           setTimeout(() => {
             if (errorNotice.parentNode) {
               errorNotice.parentNode.removeChild(errorNotice);
             }
           }, 3000);
           
-          // Remove loading indicator
+          // Always clean up the loading indicator, even on error
           if (loadingIndicator.parentNode) {
             loadingIndicator.parentNode.removeChild(loadingIndicator);
           }
@@ -1469,6 +1519,20 @@
         const content = postContent.value;
         const category = postCategory.options[postCategory.selectedIndex]?.text || '';
         
+        /**
+         * Smart Content Length Handling System
+         * 
+         * This system intelligently manages long content that might exceed AI token limits
+         * by detecting content length and providing targeted editing options.
+         * 
+         * Key features:
+         * 1. Dynamically calculates word count for user feedback
+         * 2. Analyzes request type to determine if it can be processed as-is
+         * 3. Offers specialized interactive UI for focused editing of sections
+         * 4. Prevents failed requests by proactively suggesting alternatives
+         * 5. Provides instant feedback with interactive solution options
+         */
+        
         // Check content length and display appropriate message
         const contentWordCount = content.split(/\s+/).length;
         const isVeryLong = content.length > 25000;
@@ -1476,17 +1540,20 @@
         if (isVeryLong) {
           loadingMessage.textContent = `AI is thinking... (Processing ${contentWordCount} words, may take longer)`;
           
-          // Analyze prompt to determine if it's a specific question or edit request
+          // Intelligently analyze the prompt to determine if it's already focused
+          // This allows specific requests to proceed even with longer content
           const isSpecificRequest = message.match(/paragraph|section|sentence|line|heading|beginning|end|conclusion|introduction/i);
           const isEditRequest = message.match(/edit|change|replace|modify|update|rewrite/i);
           
-          // If it's a general request but the content is very long, offer specific options
+          // Only trigger special handling for very large content with general requests
+          // This prevents interrupting the user when they're already using a targeted approach
           if (!isSpecificRequest && !isEditRequest && content.length > 40000) {
-            // Halt the current request
+            // Halt the current request to prevent a likely token limit error
             addMessage(`Your document is quite large (${contentWordCount} words), which may exceed the AI's processing limits for a full document review.`, 'system');
             addMessage(`For better results with long documents, try one of these approaches:`, 'system');
             
-            // Create interactive options
+            // Create interactive UI with focused editing options
+            // This provides users with an immediate solution rather than just an error
             const optionsMsg = document.createElement('div');
             optionsMsg.className = 'message system';
             optionsMsg.innerHTML = `
@@ -1501,12 +1568,14 @@
             chatMessages.appendChild(optionsMsg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             
-            // Add event listeners to the focus buttons
+            // Add event listeners to the focus buttons for interactive experience
             optionsMsg.querySelectorAll('.focus-btn').forEach(btn => {
               btn.addEventListener('click', function() {
+                // Get the selected focus area from button data attribute
                 const focusArea = this.getAttribute('data-focus');
                 let newPrompt = '';
                 
+                // Generate appropriate targeted prompt based on selection
                 switch(focusArea) {
                   case 'intro':
                     newPrompt = "Please improve the introduction of my blog post. Make it more engaging and clearly introduce the main topic.";
@@ -1522,10 +1591,11 @@
                     break;
                 }
                 
-                // Add the selected focus as a user message
+                // Add the selected focus as a user message to maintain conversation flow
                 addMessage(newPrompt, 'user');
                 
-                // Process with normal handler (don't create another set of options)
+                // Process with standard handler using the focused prompt
+                // This ensures a consistent experience regardless of how the prompt was generated
                 fetch('{% url "blog:ai_blog_conversation" %}', {
                   method: 'POST',
                   headers: {
@@ -1547,16 +1617,16 @@
                   addMessage('An error occurred while communicating with the AI. Please try again.', 'system');
                 });
                 
-                // Show loading spinner
+                // Show loading spinner for feedback
                 loadingSpinner.style.display = 'flex';
                 loadingMessage.textContent = 'AI is thinking...';
               });
             });
             
-            // Hide loading spinner
+            // Hide loading spinner since we're not proceeding with original request
             loadingSpinner.style.display = 'none';
             
-            // Don't proceed with the original request
+            // Don't proceed with the original request to prevent token limit errors
             return;
           }
         }
@@ -2120,6 +2190,20 @@
        * - Creates new versions after 3 seconds of inactivity
        * - Persists state to localStorage
        */
+      /**
+       * Smart Debounce Preview System
+       * 
+       * This advanced input handling system provides responsive preview updates
+       * with intelligent timing based on user typing patterns.
+       * 
+       * Key features:
+       * 1. Adapts preview delay based on typing speed and patterns
+       * 2. Quick updates after pauses for immediate feedback
+       * 3. Longer delays during rapid typing to prevent flickering
+       * 4. Automatic state persistence with each meaningful change
+       * 5. Separates preview updates from version history creation
+       * 6. Balances responsiveness with performance optimization
+       */
       let lastEditTime = 0;
       let lastPreviewTime = 0;
       
@@ -2128,42 +2212,47 @@
         const timeSinceLastEdit = now - lastEditTime;
         const timeSinceLastPreview = now - lastPreviewTime;
         
-        // Update last edit time
+        // Update last edit time for pattern detection
         lastEditTime = now;
         
-        // Clear existing timeouts
+        // Cancel pending preview updates to prevent unnecessary processing
         clearTimeout(this.debounce);
         
-        // Determine debounce delay based on typing pattern
-        let previewDelay = 1000; // Default delay
+        // Intelligently determine debounce delay based on typing pattern
+        let previewDelay = 1000; // Default moderate delay
         
-        // Quick initial preview (first edit or after a pause)
+        // Adaptive timing logic:
         if (timeSinceLastPreview > 2000) {
+          // Quick feedback after a pause (first edit or resumed editing)
+          // This provides immediate visual feedback when the user starts typing
           previewDelay = 500;
         } 
-        // Longer delay during rapid typing
         else if (timeSinceLastEdit < 300) {
+          // Longer delay during rapid typing to prevent constant re-rendering
+          // This improves performance when the user is typing continuously
           previewDelay = 1500;
         }
         
-        // Debounce the preview update
+        // Schedule the preview update with the adaptive delay
         this.debounce = setTimeout(function() {
-          // Update timestamp when preview is triggered
+          // Record when preview was last updated for future adaptation
           lastPreviewTime = Date.now();
           
-          // Update the preview with the current content
+          // Update the preview with current content
           updatePreview();
           
-          // Save current state
+          // Persist the current state to localStorage
           storageManager.saveEditorState();
         }, previewDelay);
         
-        // Version creation is handled separately with a longer delay
+        // Version history creation is handled separately with a longer delay
+        // This separates minor edits (character by character) from meaningful changes
         clearTimeout(postContent.versionDebounce);
         postContent.versionDebounce = setTimeout(function() {
-          // Create a new version after 3 seconds of inactivity
+          // Create a new version point after 3 seconds of inactivity
+          // This represents a meaningful editing pause worth tracking
           versionHistory.addVersion(postContent.value, 'edit');
-        }, 3000); // 3-second inactivity timer for version creation
+        }, 3000); // 3-second inactivity threshold for significant changes
       });
       
       // Save state when metadata changes

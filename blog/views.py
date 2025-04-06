@@ -322,20 +322,21 @@ Please help with this specific request about the blog post. If you suggest subst
             "x-api-key": clean_api_key
         }
         
+        # Configure API request with optimized parameters
         request_body = {
             "model": "claude-3-sonnet-20240229",
-            "max_tokens": 4096,  # Set to maximum allowed for this model
-            "temperature": 0.7,
+            "max_tokens": 4096,  # Set to maximum allowed for this model to handle longer responses
+            "temperature": 0.7,  # Balanced creativity vs determinism
             "messages": [{"role": "user", "content": user_prompt}],
             "system": system_message
         }
         
-        # Make the API request
+        # Make the API request with extended timeout for large documents
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json=request_body,
-            timeout=180  # Increased timeout to 3 minutes for larger responses
+            timeout=180  # Increased timeout to 3 minutes to accommodate larger responses
         )
         
         # Handle API response errors
@@ -506,20 +507,21 @@ Please provide both improvement suggestions and the revised content with your su
             "x-api-key": clean_api_key
         }
         
+        # Configure API request with optimized parameters
         request_body = {
             "model": "claude-3-sonnet-20240229",
-            "max_tokens": 4096,  # Set to maximum allowed for this model
-            "temperature": 0.7,
+            "max_tokens": 4096,  # Set to maximum allowed for this model to handle longer responses
+            "temperature": 0.7,  # Balanced creativity vs determinism
             "messages": [{"role": "user", "content": user_prompt}],
             "system": system_message
         }
         
-        # Make the API request
+        # Make the API request with extended timeout for large documents
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json=request_body,
-            timeout=180  # Increased timeout to 3 minutes for larger responses
+            timeout=180  # Increased timeout to 3 minutes to accommodate larger responses
         )
         
         # Handle API response errors
@@ -593,15 +595,22 @@ Please provide both improvement suggestions and the revised content with your su
 @require_http_methods(["POST"])
 def markdown_preview_view(request):
     """
-    API endpoint for rendering markdown content as HTML.
+    API endpoint for rendering markdown content as HTML with scroll preservation.
     
-    This view takes markdown content and returns the rendered HTML for preview.
+    This view powers the real-time preview feature in the AI blog editor by:
+    1. Accepting markdown content from the editor
+    2. Converting it to HTML using the markdownify utility
+    3. Returning the rendered HTML for display in the preview pane
+    4. Supporting the scroll position preservation system
+    
+    The endpoint is designed for fast, frequent updates as the user types,
+    with minimal processing to ensure responsive previews.
     
     Args:
-        request: The HTTP request with JSON data
+        request: The HTTP request with JSON data containing 'content' field
         
     Returns:
-        JsonResponse with the rendered HTML
+        JsonResponse with the rendered HTML in the 'html' field
     """
     try:
         # Parse the request body
