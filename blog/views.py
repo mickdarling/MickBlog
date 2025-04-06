@@ -324,7 +324,7 @@ Please help with this specific request about the blog post. If you suggest subst
         
         request_body = {
             "model": "claude-3-sonnet-20240229",
-            "max_tokens": 4000,
+            "max_tokens": 4096,  # Set to maximum allowed for this model
             "temperature": 0.7,
             "messages": [{"role": "user", "content": user_prompt}],
             "system": system_message
@@ -335,7 +335,7 @@ Please help with this specific request about the blog post. If you suggest subst
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json=request_body,
-            timeout=120
+            timeout=180  # Increased timeout to 3 minutes for larger responses
         )
         
         # Handle API response errors
@@ -508,7 +508,7 @@ Please provide both improvement suggestions and the revised content with your su
         
         request_body = {
             "model": "claude-3-sonnet-20240229",
-            "max_tokens": 4000,
+            "max_tokens": 4096,  # Set to maximum allowed for this model
             "temperature": 0.7,
             "messages": [{"role": "user", "content": user_prompt}],
             "system": system_message
@@ -519,7 +519,7 @@ Please provide both improvement suggestions and the revised content with your su
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json=request_body,
-            timeout=120
+            timeout=180  # Increased timeout to 3 minutes for larger responses
         )
         
         # Handle API response errors

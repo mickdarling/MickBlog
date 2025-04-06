@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Django 5.1+ with Bootstrap 5 frontend, PostgreSQL/SQLite databases
 - Core apps: blog, contact, core, projects, resume
 - AI features: Content editor with version history, form-based content generator
+- Blog Editor: Persistent drafts, side-by-side editing, synchronized scrolling
 - AI Response Format: Use structured sections (```conversation and ```blogpost)
+- Content: Smart handling for long documents with focused editing options
 
 For detailed documentation see [REFERENCE.md](./REFERENCE.md) and [TODO.md](./TODO.md)
